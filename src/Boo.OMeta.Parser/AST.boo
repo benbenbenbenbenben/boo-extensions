@@ -6,49 +6,51 @@ import Boo.Lang.PatternMatching
 import Boo.Lang.Compiler
 import Boo.Lang.Compiler.Ast
 
-def newMacro(name, args, body, m):
-	node = MacroStatement(Name: tokenValue(name), Body: body, Modifier: m)
+def newMacro(input as OMetaInput, name, args, body, m):
+	node = MacroStatement(Name: tokenValue(name), Body: body, Modifier: m, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for arg in args: node.Arguments.Add(arg)
 	return node
 
-def newSlicing(target as Expression, slices):
-	node = SlicingExpression(Target: target)
+def newSlicing(input as OMetaInput, target as Expression, slices):
+	node = SlicingExpression(Target: target, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for slice in slices: node.Indices.Add(slice)
 	return node
 	
-def newSlice(begin as Expression, end as Expression, step as Expression):
-	return Slice(begin, end, step)
+def newSlice(input as OMetaInput, begin as Expression, end as Expression, step as Expression):
+	return Slice(begin, end, step, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 
-def newRValue(items as List):
-	if len(items) > 1: return newArrayLiteral(items)
+def newRValue(input as OMetaInput, items as List):
+	if len(items) > 1: return newArrayLiteral(input, items)
 	return items[0]
 
-def newForStatement(declarations, e as Expression, body as Block):
-	node = ForStatement(Iterator: e, Block: body)
+def newForStatement(input as OMetaInput, declarations, e as Expression, body as Block):
+	node = ForStatement(Iterator: e, Block: body, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for d in declarations: node.Declarations.Add(d)
 	return node
 
-def newDeclaration(name, type as TypeReference):
-	return Declaration(Name: tokenValue(name), Type: type)
+#def newDeclaration(name, type as TypeReference):
+#	return Declaration(Name: tokenValue(name), Type: type)
+def newDeclaration(input as OMetaInput, name, type as TypeReference):
+	return Declaration(Name: tokenValue(name), Type: type, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 
-def newDeclarationStatement(d as Declaration,  initializer as Expression):
-	return DeclarationStatement(Declaration: d, Initializer: initializer)
+def newDeclarationStatement(input as OMetaInput, d as Declaration,  initializer as Expression):
+	return DeclarationStatement(Declaration: d, Initializer: initializer, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newUnpackStatement(declarations, e as Expression, m as StatementModifier):
-	stmt = UnpackStatement(Expression: e, Modifier: m)
+def newUnpackStatement(input as OMetaInput, declarations, e as Expression, m as StatementModifier):
+	stmt = UnpackStatement(Expression: e, Modifier: m, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for d in declarations: stmt.Declarations.Add(d)
 	return stmt
 
-def newIfStatement(condition as Expression, trueBlock as Block):
-	return IfStatement(Condition: condition, TrueBlock: trueBlock)
+def newIfStatement(input as OMetaInput, condition as Expression, trueBlock as Block):
+	return IfStatement(Condition: condition, TrueBlock: trueBlock, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newCallable(name, parameters, type):
-	node = CallableDefinition(Name: tokenValue(name), ReturnType: type)
+def newCallable(input as OMetaInput, name, parameters, type):
+	node = CallableDefinition(Name: tokenValue(name), ReturnType: type, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	setUpParameters node, parameters
 	return node
 	
-def newModule(doc, imports, members, stmts):
-	m = Module(Documentation: doc)
+def newModule(input as OMetaInput, doc, imports, members, stmts):
+	m = Module(Documentation: doc, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for item in imports: m.Imports.Add(item)
 	for member in flatten(members):
 		if member isa Attribute:
@@ -58,21 +60,21 @@ def newModule(doc, imports, members, stmts):
 	for stmt as Statement in stmts: m.Globals.Add(stmt)
 	return m
 	
-def newImport(qname as string):
-	return Import(Namespace: qname)
+def newImport(input as OMetaInput, qname as string):
+	return Import(Namespace: qname, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 
-def newInteger(t, style as NumberStyles):
+def newInteger(input as OMetaInput, t, style as NumberStyles):
 	value = int.Parse(tokenValue(t), style)
-	return IntegerLiteralExpression(Value: value)
+	return IntegerLiteralExpression(Value: value, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newEvent(attributes, modifiers, name, type):
-	return setUpMember(Event(Name: tokenValue(name), Type: type), attributes, modifiers)
+def newEvent(input as OMetaInput, attributes, modifiers, name, type):
+	return setUpMember(Event(Name: tokenValue(name), Type: type, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position)), attributes, modifiers)
 	
-def newField(attributes, modifiers, name, type, initializer):
-	return setUpMember(Field(Name: tokenValue(name), Type: type, Initializer: initializer), attributes, modifiers)
+def newField(input as OMetaInput, attributes, modifiers, name, type, initializer):
+	return setUpMember(Field(Name: tokenValue(name), Type: type, Initializer: initializer, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position)), attributes, modifiers)
 	
-def newProperty(attributes, modifiers, name, parameters, type, getter, setter):
-	node = Property(Name: tokenValue(name), Type: type, Getter: getter, Setter: setter)
+def newProperty(input as OMetaInput, attributes, modifiers, name, parameters, type, getter, setter):
+	node = Property(Name: tokenValue(name), Type: type, Getter: getter, Setter: setter, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	setUpParameters node, parameters
 	return setUpMember(node, attributes, modifiers)
 	
@@ -89,68 +91,68 @@ def setUpMember(member as TypeMember, attributes, modifiers):
 def setUpParameters(node as INodeWithParameters, parameters):
 	for p in flatten(parameters): node.Parameters.Add(p)
 	
-def newMethod(attributes, modifiers, name, parameters, returnTypeAttributes, returnType as TypeReference, body as Block) as Method:
-	node = Method(Name: tokenValue(name), Body: body, ReturnType: returnType)
+def newMethod(input as OMetaInput, attributes, modifiers, name, parameters, returnTypeAttributes, returnType as TypeReference, body as Block) as Method:
+	node = Method(Name: tokenValue(name), Body: body, ReturnType: returnType, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	setUpParameters node, parameters
 	for a in flatten(returnTypeAttributes): node.ReturnTypeAttributes.Add(a)
 	return setUpMember(node, attributes, modifiers)
 	
-def newGenericMethod(attributes, modifiers, name, genericParameters, parameters, returnTypeAttributes, returnType as TypeReference, body as Block):
-	node = newMethod(attributes, modifiers, name, parameters, returnTypeAttributes, returnType, body)
+def newGenericMethod(input as OMetaInput, attributes, modifiers, name, genericParameters, parameters, returnTypeAttributes, returnType as TypeReference, body as Block):
+	node = newMethod(input, attributes, modifiers, name, parameters, returnTypeAttributes, returnType, body)
 	for gp in flatten(genericParameters): node.GenericParameters.Add(gp)
 	return node
 
-def newGenericTypeReference(qname, args):
-	node = GenericTypeReference(Name: qname)
+def newGenericTypeReference(input as OMetaInput, qname, args):
+	node = GenericTypeReference(Name: qname, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for arg in flatten(args): node.GenericArguments.Add(arg)
 	return node
 	
-def newGenericParameterDeclaration(name):
-	node = GenericParameterDeclaration(Name: tokenValue(name))
+def newGenericParameterDeclaration(input as OMetaInput, name):
+	node = GenericParameterDeclaration(Name: tokenValue(name), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	return node
 	
-def newParameterDeclaration(attributes, name, type):
-	node = ParameterDeclaration(Name: tokenValue(name), Type: type)
+def newParameterDeclaration(input as OMetaInput, attributes, name, type):
+	node = ParameterDeclaration(Name: tokenValue(name), Type: type, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	return setUpAttributes(node, attributes)
 	
-def newEnum(attributes, modifiers, name, members):
+def newEnum(input as OMetaInput, attributes, modifiers, name, members):
 	return setUpType(EnumDefinition(Name: tokenValue(name)), attributes, modifiers, null, members)
 	
-def newCallableTypeReference(params, type):
-	node = CallableTypeReference(ReturnType: type)
+def newCallableTypeReference(input as OMetaInput, params, type):
+	node = CallableTypeReference(ReturnType: type, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	i = 0
 	for p in flatten(params):
-		node.Parameters.Add(ParameterDeclaration(Name: "arg${i++}", Type: p))
+		node.Parameters.Add(ParameterDeclaration(Name: "arg${i++}", Type: p, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position)))
 	return node
 	
-def newStatementModifier(t, e as Expression):
-	return StatementModifier(Type: t, Condition: e)
+def newStatementModifier(input as OMetaInput, t, e as Expression):
+	return StatementModifier(Type: t, Condition: e, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newGeneratorExpressionBody(dl, e, f):
-	node = GeneratorExpression(Iterator: e, Filter: f)
+def newGeneratorExpressionBody(input as OMetaInput, dl, e, f):
+	node = GeneratorExpression(Iterator: e, Filter: f, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for d in flatten(dl): node.Declarations.Add(d)
 	return node
 	
-def newGeneratorExpression(projection, body as List):
+def newGeneratorExpression(input as OMetaInput, projection, body as List):
 	node as GeneratorExpression = body[0]
 	node.Expression = projection
 	if len(body) == 1: return node
 	
-	e = ExtendedGeneratorExpression()
+	e = ExtendedGeneratorExpression(LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for item in body: e.Items.Add(item)
 	return e
 	
-def newEnumField(attributes, name, initializer):
+def newEnumField(input as OMetaInput, attributes, name, initializer):
 	match initializer:
 		case [| -$(e=IntegerLiteralExpression()) |]:
 			e.Value *= -1
 			initializer = e
 		otherwise:
 			pass
-	return setUpMember(EnumMember(Name: tokenValue(name), Initializer: initializer), attributes, null)
+	return setUpMember(EnumMember(Name: tokenValue(name), Initializer: initializer, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position)), attributes, null)
 	
-def newClass(attributes, modifiers, name, baseTypes, members):
-	return setUpType(ClassDefinition(Name: tokenValue(name)), attributes, modifiers, baseTypes, members)
+def newClass(input as OMetaInput, attributes, modifiers, name, baseTypes, members):
+	return setUpType(ClassDefinition(Name: tokenValue(name), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position)), attributes, modifiers, baseTypes, members)
 	
 def setUpType(type as TypeDefinition, attributes, modifiers, baseTypes, members):
 	if members is not null: 
@@ -171,87 +173,87 @@ macro setUpArgs:
 	|]
 	return code
 	
-def newAttribute(name, args):
-	node = Attribute(Name: tokenValue(name))
+def newAttribute(input as OMetaInput, name, args):
+	node = Attribute(Name: tokenValue(name), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	setUpArgs node, args
 	return node
 	
-def newNamedArgument(name, value):
-	return ExpressionPair(First: newReference(name), Second: value)
+def newNamedArgument(input as OMetaInput, name, value):
+	return ExpressionPair(First: newReference(input, name), Second: value, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newInterface(attributes, modifiers, name, baseTypes, members):
-	return setUpType(InterfaceDefinition(Name: tokenValue(name)), attributes, modifiers, baseTypes, members)
+def newInterface(input as OMetaInput, attributes, modifiers, name, baseTypes, members):
+	return setUpType(InterfaceDefinition(Name: tokenValue(name), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position)), attributes, modifiers, baseTypes, members)
 	
-def newInvocation(target as Expression, args as List):
-	mie = MethodInvocationExpression(Target: target)
+def newInvocation(input as OMetaInput, target as Expression, args as List):
+	mie = MethodInvocationExpression(Target: target, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	setUpArgs mie, args
 	return mie
 	
-def newQuasiquoteBlock(m):
-	return QuasiquoteExpression(Node: m)
+def newQuasiquoteBlock(input as OMetaInput, m):
+	return QuasiquoteExpression(Node: m, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newQuasiquoteExpression(s):
-	return QuasiquoteExpression(Node: s)
+def newQuasiquoteExpression(input as OMetaInput, s):
+	return QuasiquoteExpression(Node: s, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newReference(t):
-	return ReferenceExpression(Name: tokenValue(t))
+def newReference(input as OMetaInput, t):
+	return ReferenceExpression(Name: tokenValue(t), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newMemberReference(target as Expression, name):
-	return MemberReferenceExpression(Target: target, Name: tokenValue(name))
+def newMemberReference(input as OMetaInput, target as Expression, name):
+	return MemberReferenceExpression(Target: target, Name: tokenValue(name), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newArrayLiteral(type, items):
-	node = newArrayLiteral(items)
+def newArrayLiteral(input as OMetaInput, type, items):
+	node = newArrayLiteral(input, items)
 	node.Type = type
 	return node
 	
-def newArrayLiteral(items):
-	literal = ArrayLiteralExpression()
+def newArrayLiteral(input as OMetaInput, items):
+	literal = ArrayLiteralExpression(LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for item in items:
 		literal.Items.Add(item)
 	return literal
 	
-def newListLiteral(items):
-	literal = ListLiteralExpression()
+def newListLiteral(input as OMetaInput, items):
+	literal = ListLiteralExpression(LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for item in items: literal.Items.Add(item)
 	return literal
 	
-def newHashLiteral(items):
-	literal = HashLiteralExpression()
+def newHashLiteral(input as OMetaInput, items):
+	literal = HashLiteralExpression(LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for item in items: literal.Items.Add(item)
 	return literal
 	
-def newStringLiteral(s):
-	return StringLiteralExpression(Value: tokenValue(s))
+def newStringLiteral(input as OMetaInput, s):
+	return StringLiteralExpression(Value: tokenValue(s), LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newStringInterpolation(items as List):
-	if len(items) == 0: return StringLiteralExpression("")
+def newStringInterpolation(input as OMetaInput, items as List):
+	if len(items) == 0: return StringLiteralExpression("", LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	if len(items) == 1 and items[0] isa StringLiteralExpression:
 		return items[0]
 	node = ExpressionInterpolationExpression()
 	for item in items: node.Expressions.Add(item)
 	return node
 	
-def newConditionalExpression(condition, trueValue, falseValue):
-	return ConditionalExpression(Condition: condition, TrueValue: trueValue, FalseValue: falseValue)
+def newConditionalExpression(input as OMetaInput, condition, trueValue, falseValue):
+	return ConditionalExpression(Condition: condition, TrueValue: trueValue, FalseValue: falseValue, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newBlockExpression(parameters, body):
-	node = BlockExpression(Body: body)
+def newBlockExpression(input as OMetaInput, parameters, body):
+	node = BlockExpression(Body: body, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	for p in parameters: node.Parameters.Add(p)
 	return node
 	
-def newTypeofExpression(type):
-	return TypeofExpression(type)
+def newTypeofExpression(input as OMetaInput, type):
+	return TypeofExpression(type, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newInvocationWithBlock(invocation as MethodInvocationExpression, block as BlockExpression):
+def newInvocationWithBlock(input as OMetaInput, invocation as MethodInvocationExpression, block as BlockExpression):
 	node = invocation.CloneNode()
 	node.Arguments.Add(block)
 	return node
 	
-def newInfixExpression(op, l as Expression, r as Expression):
-	return BinaryExpression(Operator: binaryOperatorFor(op), Left: l, Right: r)
+def newInfixExpression(input as OMetaInput, op, l as Expression, r as Expression):
+	return BinaryExpression(Operator: binaryOperatorFor(op), Left: l, Right: r, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
-def newPrefixExpression(op, e as Expression):
-	return UnaryExpression(Operator: unaryOperatorFor(op), Operand: e)
+def newPrefixExpression(input as OMetaInput, op, e as Expression):
+	return UnaryExpression(Operator: unaryOperatorFor(op), Operand: e, LexicalInfo: LexicalInfo("", input.Line, input.Column, input.Position))
 	
 def unaryOperatorFor(op):
 	match tokenValue(op):
@@ -295,10 +297,10 @@ def binaryOperatorFor(op):
 		case ">": return BinaryOperatorType.GreaterThan
 		case ">=": return BinaryOperatorType.GreaterThanOrEqual
 	
-def newAssignment(l as Expression, r as Expression):
+def newAssignment(input as OMetaInput, l as Expression, r as Expression):
 	return [| $l = $r |]
 	
-def newBlock(contents):
+def newBlock(input as OMetaInput, contents):
 	b = Block()
 	match contents:
 		case Statement():
@@ -314,4 +316,3 @@ def prepend(first, tail as List):
 	
 def buildQName(q, rest):
 	return join(tokenValue(t) for t in prepend(q, rest), '.')
-
