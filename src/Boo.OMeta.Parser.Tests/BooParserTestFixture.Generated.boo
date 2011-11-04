@@ -52,8 +52,23 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def ast_literal_enum():
+		runTestCase("ast-literal-enum.boo")
+	
+
+	[Test]
 	def ast_literals_1():
 		runTestCase("ast-literals-1.boo")
+	
+
+	[Test]
+	def ast_literals_10():
+		runTestCase("ast-literals-10.boo")
+	
+
+	[Test]
+	def ast_literals_11():
+		runTestCase("ast-literals-11.boo")
 	
 
 	[Test]
@@ -97,6 +112,16 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def ast_literals_if_it_looks_like_a_block_1():
+		runTestCase("ast-literals-if-it-looks-like-a-block-1.boo")
+	
+
+	[Test]
+	def at_operator():
+		runTestCase("at-operator.boo")
+	
+
+	[Test]
 	def attributes_1():
 		runTestCase("attributes-1.boo")
 	
@@ -119,6 +144,16 @@ partial class BooParserTestFixture:
 	[Test]
 	def callables_2():
 		runTestCase("callables-2.boo")
+	
+
+	[Test]
+	def callables_with_varags():
+		runTestCase("callables-with-varags.boo")
+	
+
+	[Test]
+	def cast_1():
+		runTestCase("cast-1.boo")
 	
 
 	[Test]
@@ -217,6 +252,11 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def closures_22():
+		runTestCase("closures-22.boo")
+	
+
+	[Test]
 	def closures_3():
 		runTestCase("closures-3.boo")
 	
@@ -249,6 +289,11 @@ partial class BooParserTestFixture:
 	[Test]
 	def closures_9():
 		runTestCase("closures-9.boo")
+	
+
+	[Test]
+	def collection_initializer():
+		runTestCase("collection-initializer.boo")
 	
 
 	[Test]
@@ -312,6 +357,11 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def enumerable_type_shortcut():
+		runTestCase("enumerable-type-shortcut.boo")
+	
+
+	[Test]
 	def enums_1():
 		runTestCase("enums-1.boo")
 	
@@ -324,6 +374,11 @@ partial class BooParserTestFixture:
 	[Test]
 	def explode_1():
 		runTestCase("explode-1.boo")
+	
+
+	[Test]
+	def explode_2():
+		runTestCase("explode-2.boo")
 	
 
 	[Test]
@@ -482,6 +537,11 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def hash_initializer():
+		runTestCase("hash-initializer.boo")
+	
+
+	[Test]
 	def iif_1():
 		runTestCase("iif-1.boo")
 	
@@ -567,6 +627,11 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def interpolation_4():
+		runTestCase("interpolation-4.boo")
+	
+
+	[Test]
 	def invocation_1():
 		runTestCase("invocation-1.boo")
 	
@@ -589,6 +654,11 @@ partial class BooParserTestFixture:
 	[Test]
 	def list_1():
 		runTestCase("list-1.boo")
+	
+
+	[Test]
+	def long_literals_1():
+		runTestCase("long-literals-1.boo")
 	
 
 	[Test]
@@ -617,6 +687,16 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def method_declaration_in_macro_application():
+		runTestCase("method-declaration-in-macro-application.boo")
+	
+
+	[Test]
+	def method_declarations_in_nested_macro_application():
+		runTestCase("method-declarations-in-nested-macro-application.boo")
+	
+
+	[Test]
 	def module_1():
 		runTestCase("module-1.boo")
 	
@@ -642,6 +722,11 @@ partial class BooParserTestFixture:
 	
 
 	[Test]
+	def new_1():
+		runTestCase("new-1.boo")
+	
+
+	[Test]
 	def not_1():
 		runTestCase("not-1.boo")
 	
@@ -654,6 +739,11 @@ partial class BooParserTestFixture:
 	[Test]
 	def null_1():
 		runTestCase("null-1.boo")
+	
+
+	[Test]
+	def omitted_member_target_1():
+		runTestCase("omitted-member-target-1.boo")
 	
 
 	[Test]
@@ -706,6 +796,16 @@ partial class BooParserTestFixture:
 		runTestCase("splicing-1.boo")
 	
 
+//	[Test]
+//	def splicing_class_body():
+//		runTestCase("splicing-class-body.boo")
+//	
+//
+//	[Test]
+//	def splicing_enum_body():
+//		runTestCase("splicing-enum-body.boo")
+	
+
 	[Test]
 	def string_literals_1():
 		runTestCase("string-literals-1.boo")
@@ -729,6 +829,11 @@ partial class BooParserTestFixture:
 	[Test]
 	def try_2():
 		runTestCase("try-2.boo")
+	
+
+	[Test]
+	def type_references_1():
+		runTestCase("type-references-1.boo")
 	
 
 	[Test]
