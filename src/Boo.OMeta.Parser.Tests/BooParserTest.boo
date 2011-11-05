@@ -31,4 +31,32 @@ WriteLine(42)
 		
 		
 		
+	[Test]
+	def TestEndSourceLocationForInlineClosures():
+		code = """foo = { a = 3;
+return a; }"""
+		EnsureClosureEndSourceLocation(code, 2, 11)
+		
+		
+	[Test]
+	def TestEndSourceLocationForBlockClosures():
+		code = """
+foo = def():
+    return a
+"""
+		EnsureClosureEndSourceLocation(code, 3, 13)
+		
+
+	def EnsureClosureEndSourceLocation(code as string, line as int, column as int):		
+		parser = BooParser()
+		
+		match parser.module(code):
+			case SuccessfulMatch(Input: input, Value: m=Module()):
+				assert m is not null
+				assert input.IsEmpty, input.ToString()
+				e = (m.Globals.Statements[0] as ExpressionStatement).Expression
+				cbe = (e as BinaryExpression).Right as BlockExpression
+				esl = cbe.Body.EndSourceLocation
+				Assert.AreEqual(line, esl.Line)
+				Assert.AreEqual(column, esl.Column)
 		

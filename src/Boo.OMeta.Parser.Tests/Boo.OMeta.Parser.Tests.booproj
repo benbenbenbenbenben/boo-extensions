@@ -43,12 +43,10 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.boo" />
     <Compile Include="BooParserTest.boo" />
-    <Compile Include="BooParserTestFixture.boo" />
-    <Compile Include="BooParserTestFixture.Generated.boo" />
+    <Compile Include="ParserRoundtripTestFixture.boo" />
     <Compile Include="SyntaxMacroTest.boo" />
     <Compile Include="WhitespaceSensitiveTokenizerTest.boo" />
-    <Compile Include="WSABooParserTestFixture.boo" />
-    <Compile Include="WSABooParserTestFixture.Generated.boo" />
+    <Compile Include="WSAParserRoundtripTestFixture.boo" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Boo.Adt\Boo.Adt.booproj">
