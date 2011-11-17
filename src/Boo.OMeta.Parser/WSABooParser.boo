@@ -2,8 +2,9 @@ namespace Boo.OMeta.Parser
 	
 import Boo.OMeta
 import Boo.Lang.Compiler.Ast
+import Boo.Lang.Compiler
 	
-ometa WSABooParser < BooParser:
+ometa WSABooParser(compilerParameters as CompilerParameters) < BooParser(compilerParameters):
 	scanner = (empty_lines ^ makeToken("eol")) | ((--space, tokens >> t) ^ t)
 
 	keywords = ~"pass", ("end" | super)

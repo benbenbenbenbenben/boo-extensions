@@ -50,7 +50,7 @@ Expands to something that matches:
 	optionalListRule = [| $optionalRuleName = $listRuleName | ("" ^ []) |]
 	block.Add(optionalListRule)
 	
-ometa BooParser < WhitespaceSensitiveTokenizer:
+ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveTokenizer:
 
 	tokens:
 		qq_begin = "[|"
