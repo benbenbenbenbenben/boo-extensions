@@ -19,18 +19,39 @@ import System.Console
 
 WriteLine(42)
 """
-		
 		m = parseModule(code)
 		Assert.AreEqual(1, len(m.Imports))
 		Assert.AreEqual("System.Console", m.Imports[0].Namespace)
-		
+
+
+
 	def parseModule(code as string) as Module:
 		match BooParser().module(code):
 			case SuccessfulMatch(Input: OMetaInput(IsEmpty: true), Value):
 				return Value
+
+
+	[Test]
+	def TestOmetaQQ():
 		
+		parser = BooParser()
 		
-		
+		code = """try_cast from [|i as int|]"""
+		match parser.quasi_quote_ometa(code):
+			case SuccessfulMatch(Input: OMetaInput(IsEmpty: true), Value: QuasiquoteExpression(Node: TryCastExpression())):
+				pass
+
+		code = """field from [|i as int|]"""
+		match parser.quasi_quote_ometa(code):
+			case SuccessfulMatch(Input: OMetaInput(IsEmpty: true), Value: QuasiquoteExpression(Node: Field())):
+				pass
+
+		code = """parameter from [|i as int|]"""
+		match parser.quasi_quote_ometa(code):
+			case SuccessfulMatch(Input: OMetaInput(IsEmpty: true), Value: QuasiquoteExpression(Node: ParameterDeclaration())):
+				pass
+
+
 	[Test]
 	def TestEndSourceLocationForInlineClosures():
 		code = """foo = { a = 3;
@@ -59,4 +80,3 @@ foo = def():
 				esl = cbe.Body.EndSourceLocation
 				Assert.AreEqual(line, esl.Line)
 				Assert.AreEqual(column, esl.Column)
-		

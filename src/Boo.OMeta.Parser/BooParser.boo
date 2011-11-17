@@ -504,8 +504,8 @@ ometa BooParser < WhitespaceSensitiveTokenizer:
 	
 	infix exponentiation_expression, EXPONENTIATION, try_cast
 	
-	try_cast = ((try_cast >> e, AS, type_reference >> typeRef) ^ TryCastExpression(Target: e, Type: typeRef)) | cast_operator 
-	
+	try_cast = (try_cast >> e, AS, type_reference >> typeRef) ^ TryCastExpression(Target: e, Type: typeRef) | cast_operator
+
 	cast_operator = ((cast_operator >> e, CAST, type_reference >> typeRef) ^ CastExpression(Target: e, Type: typeRef)) | member_reference
 	
 	member_reference = ((member_reference >> e, DOT, ID >> name ^ newMemberReference(e, name)) \
@@ -625,11 +625,14 @@ ometa BooParser < WhitespaceSensitiveTokenizer:
 
 	optional_stmt_modifier_node = stmt_modifier_node | ""
 		
-	quasi_quote = quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
+	quasi_quote = quasi_quote_ometa | quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
 	
-	quasi_quote_module = (QQ_BEGIN, INDENT, module >> m, DEDENT, QQ_END) ^ newQuasiquoteBlock(m)
+	quasi_quote_ometa = ((id >> rule, FROM, QQ_BEGIN, $(Apply(tokenValue(rule), input)) >> m, QQ_END) | \
+						(id >> rule, FROM, QQ_BEGIN, INDENT, $(Apply(tokenValue(rule), input)) >> m, DEDENT, QQ_END)) ^ newQuasiquoteExpression(m)
 	
-	quasi_quote_member = (QQ_BEGIN, INDENT, class_member >> m, DEDENT, QQ_END) ^ newQuasiquoteBlock(m)
+	quasi_quote_module = (QQ_BEGIN, INDENT, module >> m, DEDENT, QQ_END) ^ newQuasiquoteExpression(m)
+	
+	quasi_quote_member = (QQ_BEGIN, INDENT, class_member >> m, DEDENT, QQ_END) ^ newQuasiquoteExpression(m)
 	
 	quasi_quote_expression = (QQ_BEGIN, rvalue >> s, QQ_END) ^ newQuasiquoteExpression(s)
 	
@@ -711,7 +714,7 @@ ometa BooParser < WhitespaceSensitiveTokenizer:
 	
 	false_literal = FALSE ^ [| false |]
 	
-	eol = (++EOL | ~_) ^ null
+	eol = (++EOL | ~_ | ~~(QQ_END)) ^ null
 
 	def getStart(token as Token):
 		if token:
@@ -724,6 +727,3 @@ ometa BooParser < WhitespaceSensitiveTokenizer:
 			return token.end
 		else:
 			return null
-
-
-

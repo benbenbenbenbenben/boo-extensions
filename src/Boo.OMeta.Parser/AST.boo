@@ -311,8 +311,6 @@ def newInvocation(target as Expression, args as List, genericArgs as object):
 	setUpArgs mie, flattenNoNulls(args)	
 	return mie
 	
-def newQuasiquoteBlock(m):
-	return QuasiquoteExpression(Node: m)
 	
 def newQuasiquoteExpression(s):
 	return QuasiquoteExpression(Node: s)

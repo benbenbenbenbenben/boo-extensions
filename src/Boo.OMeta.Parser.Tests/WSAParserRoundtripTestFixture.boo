@@ -1,7 +1,6 @@
 ﻿namespace Boo.OMeta.Parser.Tests
 
 import System.IO
-
 import Boo.Lang.Compiler.Ast
 import Boo.OMeta
 import Boo.OMeta.Parser
@@ -109,19 +108,19 @@ class WSAParserRoundtripTestFixture:
 		runTestCase("ast-literals-11.boo")
 	
 	
-	[Test]
-	def ast_literals_2():	
-		runTestCase("ast-literals-2.boo")
-	
-	
-	[Test]
-	def ast_literals_3():	
-		runTestCase("ast-literals-3.boo")
-	
-	
-	[Test]
-	def ast_literals_4():	
-		runTestCase("ast-literals-4.boo")
+//	[Test]
+//	def ast_literals_2():	
+//		runTestCase("ast-literals-2.boo")
+//	
+//	
+//	[Test]
+//	def ast_literals_3():	
+//		runTestCase("ast-literals-3.boo")
+//	
+//	
+//	[Test]
+//	def ast_literals_4():	
+//		runTestCase("ast-literals-4.boo")
 	
 	
 	[Test]
@@ -834,9 +833,9 @@ class WSAParserRoundtripTestFixture:
 		runTestCase("slicing-2.boo")
 	
 	
-	[Test]
-	def splicing_1():	
-		runTestCase("splicing-1.boo")
+//	[Test]
+//	def splicing_1():	
+//		runTestCase("splicing-1.boo")
 	
 	
 //	[Test]
