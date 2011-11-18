@@ -1,5 +1,6 @@
 namespace Boo.OMeta.Parser
 
+import System
 import Boo.OMeta
 import Boo.Lang.Compiler
 import Boo.Lang.Compiler.Ast
@@ -236,7 +237,6 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		attributes >> returnTypeAttributes, optional_type >> type, eol
 	) ^ newGenericMethod(attrs, mod, name, genericParameters, parameters, returnTypeAttributes, type, null)	
 	
-	
 	property_parameters = ((LBRACK, parameter_list >> parameters, RBRACK) | "") ^ parameters
 	
 	property_getter = accessor["get"]
@@ -357,7 +357,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	end_block = DEDENT
 	
-	stmt = stmt_block | stmt_line 
+	stmt = stmt_block | stmt_line | external_parser_call
 	
 	stmt_line = (~~(ID, AS), stmt_declaration) \
 		| stmt_expression \
@@ -383,6 +383,12 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		optional_exception_handler_list >> handlers, \
 		((FAILURE, block >> failureBlock) | ""), \
 		((ENSURE, block >> ensureBlock) | "")) ^ newTryStatement(protectedBlock, handlers, failureBlock, ensureBlock)
+	
+	external_parser_call = ((ID >> get_keyword) and (tokenValue(get_keyword) == "get")), \
+							ID >> rule, OF, qualified_name >> parser, \
+							FROM, COLON, spaces, newline, $(callExternalParser(rule, parser, input))
+	
+	external_parser_call_clean_up = (spaces, eol) | ""
 	
 	exception_handler = (EXCEPT, (declaration | "") >> d, block >> b) ^ ExceptionHandler(Block: b, Declaration: d)
 	
@@ -727,3 +733,33 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 			return token.end
 		else:
 			return null
+	
+	def callExternalParser(id, parser, input as OMetaInput):
+		for r in compilerParameters.References:
+			assemblyRef = r as Boo.Lang.Compiler.TypeSystem.Reflection.IAssemblyReference
+			continue if assemblyRef is null
+			
+			assembly = assemblyRef.Assembly
+			type = assembly.GetType(parser)
+			break if type is not null
+			
+		return FailedMatch(input, RuleFailure("callExternalParser", PredicateFailure(parser))) if type is null
+		
+		#Save indent and wsa parameters (wsaLevel, indentStack, indentLevel)
+		wsaLevel = input.GetMemo("wsaLevel")
+		indentStack = input.GetMemo("indentStack")
+		indentLevel = input.GetMemo("indentLevel")
+		
+		externalParser = Activator.CreateInstance(type)
+		result = type.InvokeMember(tokenValue(id), BindingFlags.InvokeMethod, null as Binder, externalParser, (input,))
+		
+		//Restore indent and wsa parameters (wsaLevel, indentStack, indentLevel) after executing of external parser
+		sm = result as SuccessfulMatch
+		if sm is not null:
+			result = self.external_parser_call_clean_up(sm.Input) 
+			result = SuccessfulMatch((result as SuccessfulMatch).Input, sm.Value)
+			sm.Input.SetMemo("wsaLevel", wsaLevel)
+			sm.Input.SetMemo("indentStack", indentStack)
+			sm.Input.SetMemo("indentLevel", indentLevel)
+			
+		return result

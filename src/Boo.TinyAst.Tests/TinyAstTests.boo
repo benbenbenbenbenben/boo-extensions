@@ -5,7 +5,6 @@ import System.IO
 import NUnit.Framework
 import System.Text
 import Boo.OMeta
-import Boo.Lang.PatternMatching
 import Boo.Lang.Compiler.Ast
 import Boo.Lang.Compiler.Steps
 import Boo.Lang.Compiler.IO
@@ -15,10 +14,8 @@ import Boo.OMeta.Parser
 data Exp = Const(value as int) | Infix(operator as string, left as Exp, right as Exp)
 
 ometa ExternalParser:
-	module = (
-		--parse >> stmts
-	) ^ newModule(null, null, [], [], stmts)
-	parse = sum >> s ^ newMacroStatement(s)
+	eol = '\n' | "\r\n" | "\r" | ~_
+	parse = --(sum >> s, eol ^ newMacroStatement(s)) >> m ^ m
 	sum = (sum >> l, ('+' | '-') >> op, fac >> r) ^ Infix(op, l, r) | fac 
 	fac = (fac >> l, ('*' |  '/') >> op, atom >> r) ^ Infix(op, l, r) | atom
 	atom = num | parens
@@ -42,35 +39,24 @@ def makeString(values):
 	b = buffer.ToString()
 	return b
 
-class ExternalParserStep(AbstractCompilerStep):
-	override def Run():
-		for input in Parameters.Input:
-			using reader=input.Open():
-				m = parseModule(reader.ReadToEnd())
-				m.Name = input.Name
-				CompileUnit.Modules.Add(m)
-				
-				
-	def parseModule(code as string) as Module:
-		
-		input = OMetaInput.For(code)
-		parser = ExternalParser()
-		
-		match OMetaEvaluationContextImpl(parser).Eval('module', input):
-			case SuccessfulMatch(Input: OMetaInput(IsEmpty: true), Value):
-				return Value	
-
-
 [TestFixture]
 class TinyAstTests:
 	
 	[Test]
 	def ExternalParserIntegrationTest1():
+		
 		output = StringWriter()
-		Console.SetOut(output)		
-		OMetaParseAndRun("(1+2)*3")
+		Console.SetOut(output)
+		
+		code = """
+get parse of Boo.TinyAst.Tests.ExternalParser from:
+(1+2)*3
+(1+1)*3
 
-		assert normalize(output.ToString()) == "9"			
+print 1
+"""
+		OMetaParseAndRun(code)
+		assert normalize(output.ToString()) == "9\n6\n1"
 
 	def normalize(s as string):
 		return s.Trim().Replace("\r\n", "\n")
@@ -85,7 +71,7 @@ class TinyAstTests:
 		
 		p = Boo.Lang.Compiler.Pipelines.CompileToMemory()		
 		p.Add(RunAssembly())		
-		p.Replace(typeof(Parsing), ExternalParserStep())
+		p.Replace(typeof(Parsing), BooParserStep())
 		
 		compiler.Parameters.Pipeline = p
 		compiler.Parameters.Input.Add(StringInput("", code))

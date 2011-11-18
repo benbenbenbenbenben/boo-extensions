@@ -97,7 +97,7 @@ def newModule(ns as string, doc, imports, members, stmts):
 			m.Globals.Add(member as Statement)
 		else:
 			m.Members.Add(member)
-	for stmt as Statement in stmts: m.Globals.Add(stmt)
+	for stmt as Statement in flatten(stmts): m.Globals.Add(stmt)
 	return m
 	
 def newImport(qname as string, assembly, alias):
