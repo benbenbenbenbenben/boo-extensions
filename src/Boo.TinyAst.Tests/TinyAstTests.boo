@@ -55,7 +55,7 @@ get parse of Boo.TinyAst.Tests.ExternalParser from:
 
 print 1
 """
-		OMetaParseAndRun(code)
+		o = OMetaParseAndRun(code)
 		assert normalize(output.ToString()) == "9\n6\n1"
 
 	def normalize(s as string):

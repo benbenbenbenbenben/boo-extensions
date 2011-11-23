@@ -41,7 +41,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.boo" />
+    <Compile Include="TinyAstMacro.boo" />
     <Compile Include="TinyAstParser.boo" />
+    <Compile Include="TinyAstParserStep.boo" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Boo.Adt\Boo.Adt.booproj">

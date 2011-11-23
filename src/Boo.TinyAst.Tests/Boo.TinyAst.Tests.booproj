@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.boo" />
+    <Compile Include="ParserRoundtripTestFixture.boo" />
     <Compile Include="TestMacroMacro.boo" />
     <Compile Include="TinyAstTests.boo" />
   </ItemGroup>
@@ -60,6 +61,10 @@
     <ProjectReference Include="..\Boo.OMeta\Boo.OMeta.booproj">
       <Project>{EED6C932-8AEE-42CB-8837-C323DC74980B}</Project>
       <Name>Boo.OMeta</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Boo.TinyAst\Boo.TinyAst.booproj">
+      <Project>{5E3584E2-1BD0-49DA-815B-2DDA724C565F}</Project>
+      <Name>Boo.TinyAst</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(BooBinPath)\Boo.Microsoft.Build.targets" />
