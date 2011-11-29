@@ -5,6 +5,7 @@ import System.IO
 import NUnit.Framework
 import System.Text
 import Boo.OMeta
+import Boo.TinyAst
 import Boo.Lang.Compiler.Ast
 import Boo.Lang.Compiler.Steps
 import Boo.Lang.Compiler.IO
@@ -58,6 +59,19 @@ print 1
 		o = OMetaParseAndRun(code)
 		assert normalize(output.ToString()) == "9\n6\n1"
 
+	[Test]
+	def ExternalParserIntegrationTest2():
+		output = StringWriter()
+		Console.SetOut(output)
+		
+		code = """
+get form_stmt of Boo.TinyAst.TinyAstParser from:
+a = (1, 2, 3,)
+"""
+		o = OMetaParseAndRun(code)
+		assert normalize(output.ToString()) == ""
+
+
 	def normalize(s as string):
 		return s.Trim().Replace("\r\n", "\n")
 		
@@ -66,7 +80,8 @@ print 1
 		compiler.Parameters.OutputWriter = StringWriter()
 		compiler.Parameters.References.Add(typeof(MacroMacro).Assembly)
 		compiler.Parameters.References.Add(typeof(OMetaMacroProcessor).Assembly)
-		compiler.Parameters.References.Add(typeof(WhitespaceSensitiveTokenizer).Assembly)		
+		compiler.Parameters.References.Add(typeof(WhitespaceSensitiveTokenizer).Assembly)
+		compiler.Parameters.References.Add(typeof(TinyAstParser).Assembly)	
 		compiler.Parameters.References.Add(GetType().Assembly)
 		
 		p = Boo.Lang.Compiler.Pipelines.CompileToMemory()		

@@ -5,13 +5,15 @@ import Boo.OMeta
 import Boo.Adt
 import Boo.OMeta.Parser
 import Boo.Lang.Compiler.Ast
+import System.Globalization
 
 data Form = \
-	Identifier(name as string) | \
-	Quote(form as Form, quote as string)  |\
-	Literal(value as object) | \
-	Infix(operator as string, left as Form, right as Form) |\
-	Prefix(operator as Form, operand as Form)
+	Identifier(Name as string) | \
+	Quote(Form as Form, Quote as string)  |\
+	Literal(Value as object) |\
+	Infix(Operator as string, Left as Form, Right as Form) |\
+	Prefix(Operator as Form, Operand as Form) |\
+	Tuple(Forms as (Form))
 
 macro infix:
 	
@@ -37,13 +39,27 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	tokens:
 		assign = "="
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
+		
+		plus = "+"
+		minus = "-"
 
 		dot = "."
+		comma = ","
 		kw = (keywords >> value, ~(letter | digit | '_')) ^ value
 		tdq = '"""'
 		dq = '"'
 		sq = "'"
 		id = ((letter | '_') >> p, --(letter | digit | '_') >> s) ^ makeString(p, s)
+		
+		hexnum = ("0x", ++(hex_digit | digit) >> ds) ^ makeString(ds)
+		num = ++digit
+		
+		lparen = "(", enterWhitespaceAgnosticRegion
+		rparen = ")", leaveWhitespaceAgnosticRegion
+		lbrack = "[", enterWhitespaceAgnosticRegion
+		rbrack = "]", leaveWhitespaceAgnosticRegion
+		lbrace = "{", enterWhitespaceAgnosticRegion
+		rbrace = "}", leaveWhitespaceAgnosticRegion
 
 	keywords "and", "as", "import", "from", "namespace", "or"
 	keyword[expected] = ((KW >> t) and (expected is tokenValue(t))) ^ t
@@ -78,24 +94,35 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		--EOL,
 		((namespace_declaration >> ns , EOL) | ""),
 		--import_declaration >> ids,
-		(--(form >> f ^ newMacroStatement(f) ) ) >> forms,
+		(--form_stmt ) >> forms,
 		--EOL
 	) ^ newModule(ns, s, ids, [], forms)
 
-	//Parsing of forms
-	form = (infix_operator | identifier) >> f, eol ^ f
+	//Parsing of forms	
+	form_stmt = form >> f, EOL ^ newMacroStatement(f)
+	form = tuple | infix_operator | identifier | literal
+	
+	literal = integer
+	integer = (
+		((MINUS | "") >> sign, NUM >> n and (IsValidLong(sign, n)), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.AllowLeadingSign, suffix)) \
+		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
+	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
 
 	macro_prefix = ""
-	
-	infix_operator = assignment	
+
+	infix_operator = assignment
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
-	infix and_expression, AND, atom
-	
-	atom = identifier
+	infix and_expression, AND, form
 	
 	identifier = ID >> s ^ Identifier(tokenValue(s))
+	tuple = LPAREN, form_list >> f, optional_comma, RPAREN ^ newTuple(f) 
+	optional_comma = COMMA | ""
+	list_of form
+	list_of literal
 	
+	def newTuple(f as List):
+		return Tuple(array(Form,f))
 
 	def newMacroStatement(data):
 		m = MacroStatement("tinyAst")
@@ -113,17 +140,17 @@ ometa TinyAstEvaluator:
 
 	boolean = true_literal | false_literal
 	
-	true_literal = Identifier(name:"true") ^ [| true |]
+	true_literal = Identifier(Name:"true") ^ [| true |]
 	
-	false_literal = Identifier(name: "false") ^ [| false |]	
+	false_literal = Identifier(Name: "false") ^ [| false |]	
 	
 	binary_operator = ( (_ >> a and (a == "or" )) ^ Token("or", "or")) | ( (_ >> a and (a == "and" )) ^ Token("and","and"))		
 	
-	binary_expression = Infix(operator:binary_operator >> op, left:expression >> l, right:expression >> r) ^ newInfixExpression(op, l, r)
+	binary_expression = Infix(Operator:binary_operator >> op, Left:expression >> l, Right:expression >> r) ^ newInfixExpression(op, l, r)
 	
-	reference = Identifier() >> r ^ ReferenceExpression(Name: (r as Identifier).name)
+	reference = Identifier() >> r ^ ReferenceExpression(Name: (r as Identifier).Name)
 	
-	assignment = Infix(operator:"=", left:reference >> l, right: expression >> r) ^ newInfixExpression(Token("=", "="), l, r)
+	assignment = Infix(Operator:"=", Left:reference >> l, Right: expression >> r) ^ newInfixExpression(Token("=", "="), l, r)
 		
 
 	

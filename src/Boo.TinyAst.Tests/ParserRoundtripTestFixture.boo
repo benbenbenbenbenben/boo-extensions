@@ -18,24 +18,37 @@ class ParserRoundtripTestFixture:
 	[Test]
 	def and_or_1():
 		runTestCase("and-or-1.boo")
+		
+	[Test]
+	def arrays_4():
+		runTestCase("arrays-4.boo")
+		
 
 	def runTestCase(fname as string):		
 		fullName = Path.Combine(booRoundtripTestCasesPath(), fname)
 		
-		o = OMetaParseAndRun(File.ReadAllText(fullName))
-		print o.Errors[0].InnerException if o.Errors.Count > 0
-		cu = o.CompileUnit
-		
-		m = cu.Modules[0]
-		
-		print m
+		OMetaParse(File.ReadAllText(fullName))
+//		print o.Errors[0].InnerException if o.Errors.Count > 0
+//		cu = o.CompileUnit		
+//		m = cu.Modules[0]		
+//		print m
 //		match parser.module():
 //			case SuccessfulMatch(Input: input, Value: m=Module()):
-		assert m is not null
-		assert m.Documentation is not null
-		Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
+//		assert m is not null
+//		assert m.Documentation is not null
+//		Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
 //				assert input.IsEmpty, input.ToString()
-		
+
+	def OMetaParse(code as string):
+		parser = TinyAstParser()
+		match parser.module(code):
+			case SuccessfulMatch(Input: input, Value: m=Module()):
+				assert m is not null
+				assert m.Documentation is not null
+				//Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
+				assert input.IsEmpty, input.ToString()
+
+
 	def OMetaParseAndRun(code as string):
 		compiler = Boo.Lang.Compiler.BooCompiler()
 		compiler.Parameters.OutputWriter = StringWriter()
@@ -91,9 +104,6 @@ class ParserRoundtripTestFixture:
 		runTestCase("arrays-3.boo")
 	
 
-	[Test]
-	def arrays_4():
-		runTestCase("arrays-4.boo")
 	
 
 	[Test]
