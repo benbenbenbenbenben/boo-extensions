@@ -100,7 +100,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	//Parsing of forms	
 	form_stmt = form >> f, EOL ^ newMacroStatement(f)
-	form = tuple | infix_operator | identifier | literal
+	form = tuple | prefix_operator | infix_operator | identifier | literal
 	
 	literal = integer
 	integer = (
@@ -108,19 +108,21 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
 	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
 
-	macro_prefix = ""
-
 	infix_operator = assignment
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, form
 	
-	identifier = ID >> s ^ Identifier(tokenValue(s))
+	identifier = (ID | KW) >> s ^ Identifier(tokenValue(s))
 	tuple = LPAREN, form_list >> f, optional_comma, RPAREN ^ newTuple(f) 
-	optional_comma = COMMA | ""
 	list_of form
-	list_of literal
-	
+	optional_comma = COMMA | ""
+
+	prefix_operator = form >> f1, form >> f2 ^ newPrefix(f1, f2)
+
+	def newPrefix(f1, f2):
+		return Prefix(f1, f2)
+		
 	def newTuple(f as List):
 		return Tuple(array(Form,f))
 

@@ -65,11 +65,21 @@ print 1
 		Console.SetOut(output)
 		
 		code = """
-get form_stmt of Boo.TinyAst.TinyAstParser from:
-a = (1, 2, 3,)
+get prefix_operator of Boo.TinyAst.TinyAstParser from:
+a0 as (int)
 """
 		o = OMetaParseAndRun(code)
 		assert normalize(output.ToString()) == ""
+
+	[Test]
+	def TinyAstTest1():
+		code = """a0 as"""		
+		parser = TinyAstParser()
+		
+		o = parser.form(code)
+		print o
+		
+
 
 
 	def normalize(s as string):

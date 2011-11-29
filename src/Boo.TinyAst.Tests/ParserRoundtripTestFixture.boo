@@ -24,6 +24,12 @@ class ParserRoundtripTestFixture:
 		runTestCase("arrays-4.boo")
 		
 
+	[Test]
+	def arrays_5():
+		runTestCase("arrays-5.boo")
+
+		
+
 	def runTestCase(fname as string):		
 		fullName = Path.Combine(booRoundtripTestCasesPath(), fname)
 		
@@ -106,9 +112,6 @@ class ParserRoundtripTestFixture:
 
 	
 
-	[Test]
-	def arrays_5():
-		runTestCase("arrays-5.boo")
 	
 
 	[Test]
