@@ -63,20 +63,39 @@ print 1
 	def ExternalParserIntegrationTest2():
 		output = StringWriter()
 		Console.SetOut(output)
-		
+
 		code = """
-get prefix_operator of Boo.TinyAst.TinyAstParser from:
-a0 as (int)
+get form of Boo.TinyAst.TinyAstParser from:
+a0 as (int,1)
 """
 		o = OMetaParseAndRun(code)
 		assert normalize(output.ToString()) == ""
 
 	[Test]
 	def TinyAstTest1():
-		code = """a0 as"""		
+		code = """names = (
+			"Tex",
+			"Nanico",
+			"Bamboo"
+		)
+attributes = ("rules", "sucks", "is a big head")
+for n, a in zip(names, attributes):
+	print("\${n} \${a}!")
+	
+single_element_array = ("one and only", )
+"""
+
+		//code = """a = false and true or true"""
+		
+//		code = """for n,a in zip(names, attributes):
+//	print("\${n} \${a}!")
+//"""
+	
+		//code = """print("\${n} \${a}!")"""
+	
 		parser = TinyAstParser()
 		
-		o = parser.form(code)
+		o = parser.block(code)
 		print o
 		
 

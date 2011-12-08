@@ -20,6 +20,16 @@ class ParserRoundtripTestFixture:
 		runTestCase("and-or-1.boo")
 		
 	[Test]
+	def arrays_1():
+		runTestCase("arrays-1.boo")
+	
+
+	[Test]
+	def arrays_2():
+		runTestCase("arrays-2.boo")
+		
+		
+	[Test]
 	def arrays_4():
 		runTestCase("arrays-4.boo")
 		
@@ -95,14 +105,7 @@ class ParserRoundtripTestFixture:
 		
 	
 
-	[Test]
-	def arrays_1():
-		runTestCase("arrays-1.boo")
-	
 
-	[Test]
-	def arrays_2():
-		runTestCase("arrays-2.boo")
 	
 
 	[Test]
