@@ -119,7 +119,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	string_literal = (sqs | dqs) >> s ^ Literal(s)
 	
 	infix_operator = assignment 
-	infix assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
+	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, membership_expression
 	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), as_operator	

@@ -73,17 +73,7 @@ a0 as (int,1)
 
 	[Test]
 	def TinyAstTest1():
-		code = """names = (
-			"Tex",
-			"Nanico",
-			"Bamboo"
-		)
-attributes = ("rules", "sucks", "is a big head")
-for n, a in zip(names, attributes):
-	print("\${n} \${a}!")
-	
-single_element_array = ("one and only", )
-"""
+		code = """a = 1, b=2, 3"""
 
 		//code = """a = false and true or true"""
 		

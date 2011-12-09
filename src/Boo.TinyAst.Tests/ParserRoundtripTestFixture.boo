@@ -88,17 +88,17 @@ class ParserRoundtripTestFixture:
 	[once] def booRoundtripTestCasesPath():
 		
 		return Path.Combine(
-					findSiblingBooDirectory(parentDirectory(System.Environment.CurrentDirectory)),
-					"tests/testcases/parser/roundtrip")
+					findSiblingBooExtensionsDirectory(parentDirectory(System.Environment.CurrentDirectory)),
+					"tests/testcases/roundtrip")
 		
-	def findSiblingBooDirectory(dir as string) as string:
+	def findSiblingBooExtensionsDirectory(dir as string) as string:
 		
-		booDir = Path.Combine(dir, "boo")
+		booDir = Path.Combine(dir, "boo-extensions")
 		if Directory.Exists(booDir): return booDir
 		
 		parent = parentDirectory(dir)
 		assert parent != dir
-		return findSiblingBooDirectory(parent)
+		return findSiblingBooExtensionsDirectory(parent)
 		
 	def parentDirectory(dir as string):
 		return Path.GetDirectoryName(dir)

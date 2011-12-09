@@ -9,6 +9,7 @@ import Boo.Lang.PatternMatching
 import Boo.Lang.Useful.Attributes
 import NUnit.Framework
 
+[TestFixture]
 class ParserRoundtripTestFixture:
 
 	def runTestCase(fname as string):

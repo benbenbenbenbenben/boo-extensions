@@ -8,6 +8,7 @@ import Boo.Lang.PatternMatching
 import Boo.Lang.Useful.Attributes
 import NUnit.Framework
 
+[TestFixture]
 class WSAParserRoundtripTestFixture:
 
 	def runTestCase(fname as string):
