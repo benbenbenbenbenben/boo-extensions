@@ -15,31 +15,6 @@ import NUnit.Framework
 [TestFixture]
 class ParserRoundtripTestFixture:
 
-	[Test]
-	def and_or_1():
-		runTestCase("and-or-1.boo")
-		
-	[Test]
-	def arrays_1():
-		runTestCase("arrays-1.boo")
-	
-
-	[Test]
-	def arrays_2():
-		runTestCase("arrays-2.boo")
-		
-		
-	[Test]
-	def arrays_4():
-		runTestCase("arrays-4.boo")
-		
-
-	[Test]
-	def arrays_5():
-		runTestCase("arrays-5.boo")
-
-		
-
 	def runTestCase(fname as string):		
 		fullName = Path.Combine(booRoundtripTestCasesPath(), fname)
 		
@@ -102,25 +77,34 @@ class ParserRoundtripTestFixture:
 		
 	def parentDirectory(dir as string):
 		return Path.GetDirectoryName(dir)
+
+	[Test]
+	def and_or_1():
+		runTestCase("and-or-1.boo")
 		
-	
+	[Test]
+	def arrays_1():
+		runTestCase("arrays-1.boo")	
 
-
-	
+	[Test]
+	def arrays_2():
+		runTestCase("arrays-2.boo")	
 
 	[Test]
 	def arrays_3():
 		runTestCase("arrays-3.boo")
-	
-
-	
-
-	
 
 	[Test]
-	def arrays_6():
-		runTestCase("arrays-6.boo")
+	def arrays_4():
+		runTestCase("arrays-4.boo")		
+
+	[Test]
+	def arrays_5():
+		runTestCase("arrays-5.boo")
 	
+	[Test]
+	def arrays_6():
+		runTestCase("arrays-6.boo")	
 
 	[Test]
 	def as_1():

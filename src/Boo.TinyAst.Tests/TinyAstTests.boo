@@ -11,6 +11,7 @@ import Boo.Lang.Compiler.Steps
 import Boo.Lang.Compiler.IO
 import Boo.Adt
 import Boo.OMeta.Parser
+import Boo.Lang.PatternMatching
 
 data Exp = Const(value as int) | Infix(operator as string, left as Exp, right as Exp)
 
@@ -56,7 +57,7 @@ get parse of Boo.TinyAst.Tests.ExternalParser from:
 
 print 1
 """
-		o = OMetaParseAndRun(code)
+		OMetaParseAndRun(code)
 		assert normalize(output.ToString()) == "9\n6\n1"
 
 	[Test]
@@ -68,26 +69,64 @@ print 1
 get form of Boo.TinyAst.TinyAstParser from:
 a0 as (int,1)
 """
-		o = OMetaParseAndRun(code)
+		OMetaParseAndRun(code)
 		assert normalize(output.ToString()) == ""
 
 	[Test]
-	def TinyAstTest1():
-		code = """a = 1, b=2, 3"""
+	def Tuple1():
+		TestParseBlock("""1, 2, 3, 4""")
 
-		//code = """a = false and true or true"""
+	[Test]
+	def Tuple2():
+		TestParseBlock("""(1, 2), (3, 4)""")
 		
-//		code = """for n,a in zip(names, attributes):
-//	print("\${n} \${a}!")
-//"""
-	
-		//code = """print("\${n} \${a}!")"""
-	
+	[Test]
+	def Infix1():
+		TestParseBlock("""names = (
+			"Tex",
+			"Nanico",
+			"Bamboo"
+		)""")
+		
+	[Test]
+	def Prefix1():
+		TestParseBlock("""\$(extension)""")
+
+	[Test]
+	def Prefix2():
+		TestParseBlock("""\$(extension)(context)""")
+
+	[Test]
+	def Prefix3():
+		TestParseBlock("""for (n, a) in zip(names, attributes)""")
+
+
+				
+	private def TestParseBlock(code as string):
 		parser = TinyAstParser()
-		
 		o = parser.block(code)
-		print o
+		match o:
+			case SuccessfulMatch(Input: input):
+				assert input.IsEmpty
+	
+	
+	[Test]
+	def TinyAstTest1():
+
+
+		//code ="""false or true and true"""
 		
+		code = """for (n, a) in zip(names, attributes):
+	print("\${n} \${a}!")"""
+		//code = """(parent as parent)"""
+//		booParser = BooParser()
+//		m =  booParser.module(code2)
+		
+		parser = TinyAstParser()
+		o = parser.multi_line_pair(code)
+
+		print o
+
 
 
 
