@@ -7,16 +7,21 @@ import Boo.OMeta.Parser
 import Boo.Lang.Compiler.Ast
 import System.Globalization
 
+enum BracketType:
+	QQ
+	Parenthesis
+	Square
+	Curly
+
 data Form = \
 	Identifier(Name as string) | \
-	Quote(Form)  |\
+	Brackets(Form, Kind as BracketType)  |\
 	Literal(Value as object) |\
 	Infix(Operator as string, Left, Right) |\
 	Prefix(Operator, Operand) |\
 	Tuple(Forms as (Form)) |\
-	Pair(Left, Right) |\
+	Pair(Left, Right, Multiline as bool) |\
 	Block(Forms as (Form))
-	
 
 macro infix:
 	l, op, r = infix.Arguments
@@ -28,15 +33,22 @@ macro infixr:
 	
 macro prefix:
 	rule, op, next = prefix.Arguments
-	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(op, e) | $next |])
+	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op)), e) | $next |])
 
 ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	tokens:
+		qq_begin = "[|"
+		qq_end = "|]"
+		splice_begin = "$"
 		assign = "="
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		
 		plus = "+"
 		minus = "-"
+		exponentiation = "**"
+		star = "*"
+		division = "/"
+		modulus = "%"
 		colon = ":"
 		dot = "."
 		comma = ","
@@ -94,18 +106,19 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	) ^ newModule(ns, s, ids, [], forms)
 
 	//Parsing of forms
+	form = multi_line_pair | single_line_form
+	
+	single_line_form = single_line_pair | prefix_operator | (infix_operator >> i) /*and (i isa Infix)) |  (mmm1, atom)*/
 
-	form = single_line_pair | (prefix_operator >> p and (p isa Prefix)) | (infix_operator >> i and (i isa Infix)) | atom
+	form_stmt = ((multi_line_pair >> f) | (single_line_form >> f, eol)) ^ f
 
-	form_stmt = ((multi_line_pair >> f) | (form >> f, eol)) ^ f
-
-	block = (++(form_stmt) >> forms) ^ Block(array(Form,forms as List))		
+	block = (++(form_stmt) >> forms) ^ Block(array(Form, forms as List))		
 
 	single_line_pair = (single_line_pair_prescan >> p and (p isa Pair)) ^ p
-	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, form >> right ^ Pair(left, right)) | prefix_operator | infix_operator | atom
-
-	multi_line_pair = (multi_line_pair_prescan >> p and (p isa Pair)) ^ p
-	multi_line_pair_prescan = (multi_line_pair_prescan >> left, begin_block, block >> right, end_block ^ Pair(left, right)) | prefix_operator | infix_operator | atom
+	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false)) | prefix_operator | infix_operator //| atom
+//
+	multi_line_pair = (multi_line_pair_prescan >> p and ((p isa Pair) and (p as Pair).Multiline)) ^ p
+	multi_line_pair_prescan = (multi_line_pair_prescan >> left, begin_block, block >> right, end_block ^ Pair(left, right, true)) | single_line_form //prefix_operator | infix_operator | atom
 
 	begin_block = COLON, INDENT
 	end_block = DEDENT
@@ -118,30 +131,91 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	string_literal = (sqs | dqs) >> s ^ Literal(s)
 	
-	infix_operator = assignment 
+	infix_operator = tuple2
+	tuple2 = (tuple2 >> t, COMMA, assignment >> last ^ newTuple(t, last)) | assignment	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
-	infix and_expression, AND, membership_expression
-	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), as_operator	
-	infix as_operator, AS, atom
-	
-	atom = prefix_operator | tuple | identifier | literal
+	infix and_expression, AND, not_expression	
+	prefix not_expression, NOT, membership_expression		
+	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), term
 
-	identifier = (ID | KW) >> s ^ Identifier(tokenValue(s))
-	tuple = tuple1 | tuple2
-	tuple1 = (LPAREN, (tuple_item_list | (tuple_item >> f ^ [f]) | ("" ^ [])) >> f, optional_comma, RPAREN) ^ newTuple(f)
-	tuple_item = tuple1 | identifier | literal	
-	tuple2 = (tuple_item_list >> f) ^ newTuple(f)
+	infix term, (PLUS | MINUS), factor
+	infix factor, (STAR | DIVISION | MODULUS), as_operator
+	
+	infix as_operator, AS, member_reference
+	
+	infix member_reference, DOT, splice
+	
+	prefix splice, SPLICE_BEGIN, atom
+	
+	atom = exp_in_brackets | prefix_operator2 | identifier | literal
+	
+	//atom = exp_in_brackets | tuple2 | identifier | literal
+
+	identifier = ID >> s ^ Identifier(tokenValue(s))
+	
+	paren_brackets = (LPAREN, ( form | "" ) >> f, optional_comma, RPAREN) ^  Brackets(f, BracketType.Parenthesis)
+
+	def mmm(f):
+		return f
+		
+	mmm1 = ~~_
+	
+	mmm2 = ~~_	
+	
+	qq_brackets = ((QQ_BEGIN, INDENT, block >> f, DEDENT, QQ_END) | (QQ_BEGIN, form >> f, QQ_END)) ^ Brackets(f, BracketType.QQ)
+	
+	square_brackets = (LBRACK, ( form | "") >> f, optional_comma, RBRACK) ^ Brackets(f, BracketType.Square)
+	
+	curly_brackets = (LBRACE, ( form | "") >> f, optional_comma, RBRACE) ^ Brackets(f, BracketType.Curly)
+	
+	exp_in_brackets = (paren_brackets | qq_brackets | square_brackets | curly_brackets) >> f ^ mmm(f)
+	
+	//tuple1 = (LPAREN, ( (tuple2 >> f and (f isa Tuple)) | (atom >> f ^ [f]) | ("" ^ [])) >> f, optional_comma, RPAREN) ^ newTuple(f)
+	//tuple1 = (LPAREN, (tuple_item_list | (tuple_item >> f ^ [f]) | ("" ^ [])) >> f, optional_comma, RPAREN) ^ newTuple(f)
+	//tuple_item = (tuple1 | (infix_operator >> i and (i isa Infix)) | identifier | literal) >> f ^ mmm(f)
+	//tuple2 = enterListMode, (tuple_item_list >> f), leaveListMode ^ newTuple(f)
 	
 	tuple_item_list = (((tuple_item >> first), ++((COMMA, tuple_item >> e) ^ e) >> rest) ^ prepend(first, rest))
 	
-	list_of form
+	list_of single_line_form
 	optional_comma = COMMA | ""
 
-	prefix_operator = identifier >> f1, form >> f2 ^ Prefix(f1, f2)
+	prefix_operator = (prefix_operator_start >> f1, single_line_form >> f2) ^ Prefix(f1, f2)
+	prefix_operator2 = ((prefix_operator_start >> f1, (exp_in_brackets | single_line_form) >> f2) ^ Prefix(f1, f2)) // | \
+						//(infix_operator >> f1 and (f1 isa Prefix))
+	prefix_operator_start = (identifier | exp_in_brackets /*| infix_operator infix_operator causes left reqursion fail*/) >> f and (f isa Identifier or f isa Brackets or f isa Prefix )
+	
+	enterListMode = $(enterLM(input))
+	leaveListMode = $(leaveLM(input))
+	listMode = ~~_ and inLM(input)
+
+	def enterLM(input as OMetaInput):
+		if inLM(input): return FailedMatch(input, PredicateFailure("inLM"))
+		return ListMode(input, ListMode(input) + 1)
+		
+	def leaveLM(input as OMetaInput):
+		return ListMode(input, ListMode(input) - 1)	
+
+	def inLM(input as OMetaInput):
+		return ListMode(input) > 0
+		
+	def ListMode(input as OMetaInput) as int:
+		return input.GetMemo("listMode") or 0
+		
+	def ListMode(input as OMetaInput, value as int):
+		return SuccessfulMatch(input.SetMemo("listMode", value), null)
 
 	def newTuple(f):
+		if f isa Tuple: return f
 		return Tuple(array(Form,f as List))
+
+	def newTuple(t, last):
+		if t isa Tuple:
+			tu = t as Tuple
+			return Tuple(array(Form, flatten([tu.Forms,last])))
+		else:
+			return Tuple(array(Form,[t,last]))
 
 	def newMacroStatement(data):
 		m = MacroStatement("tinyAst")

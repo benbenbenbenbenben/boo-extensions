@@ -126,8 +126,7 @@ ometa WhitespaceSensitiveTokenizer():
 		return getIndent(input) == len(i)
 		
 	def largerIndent(input as OMetaInput, i):
-		if len(i) > getIndent(input):
-			return true
+		return len(i) > getIndent(input)
 
 	def smallerIndent(input as OMetaInput, i):
 		return len(i) < getIndent(input)
