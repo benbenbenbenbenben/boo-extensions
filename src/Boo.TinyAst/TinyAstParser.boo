@@ -131,7 +131,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	string_literal = (sqs | dqs) >> s ^ Literal(s)
 	
-	infix_operator = tuple2
+	infix_operator = prefix2
+	prefix2 = (tuple2 >> op, prefix2 >> e ^ Prefix(op, e)) | tuple2
+	
 	tuple2 = (tuple2 >> t, COMMA, assignment >> last ^ newTuple(t, last)) | assignment	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
@@ -148,9 +150,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	prefix splice, SPLICE_BEGIN, atom
 	
-	atom = exp_in_brackets | prefix_operator2 | identifier | literal
+	atom = exp_in_brackets | identifier | literal
 	
-	//atom = exp_in_brackets | tuple2 | identifier | literal
+	//atom = exp_in_brackets | prefix_operator2 | identifier | literal
+	
 
 	identifier = ID >> s ^ Identifier(tokenValue(s))
 	

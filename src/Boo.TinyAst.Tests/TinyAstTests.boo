@@ -100,6 +100,11 @@ a0 as (int,1)
 	def Prefix3():
 		TestParseBlock("""for (n, a) in zip(names, attributes)""")
 
+	[Test]
+	def MultilinePair1():
+		TestParseBlock("""for (n, a) in zip(names, attributes):
+	print("\${n} \${a}!")""")
+
 
 				
 	private def TestParseBlock(code as string):
