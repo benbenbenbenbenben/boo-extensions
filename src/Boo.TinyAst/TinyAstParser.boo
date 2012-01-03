@@ -40,15 +40,22 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		qq_begin = "[|"
 		qq_end = "|]"
 		splice_begin = "$"
+		equality = "=="
+		inequality = "!="
 		assign = "="
-		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
-		
+		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="		
+		increment = "++"
+		decrement = "--"		
 		plus = "+"
 		minus = "-"
 		exponentiation = "**"
 		star = "*"
 		division = "/"
 		modulus = "%"
+		greater_than_eq = ">="
+		greater_than = ">"
+		less_than_eq = "<="
+		less_than = "<"
 		colon = ":"
 		dot = "."
 		comma = ","
@@ -139,11 +146,13 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
 	prefix not_expression, NOT, membership_expression		
-	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), term
+	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), comparison
+	
+	infix comparison, (EQUALITY | INEQUALITY | GREATER_THAN | GREATER_THAN_EQ | LESS_THAN | LESS_THAN_EQ), term	
 
 	infix term, (PLUS | MINUS), factor
-	infix factor, (STAR | DIVISION | MODULUS), as_operator
-	
+	infix factor, (STAR | DIVISION | MODULUS), signalled_expression	
+	prefix signalled_expression, (MINUS | INCREMENT | DECREMENT), as_operator	
 	infix as_operator, AS, member_reference
 	
 	infix member_reference, DOT, splice

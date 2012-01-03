@@ -121,14 +121,13 @@ a0 as (int,1)
 
 		//code ="""false or true and true"""
 		
-		code = """for (n, a) in zip(names, attributes):
-	print("\${n} \${a}!")"""
+		code = """while a < 42"""
 		//code = """(parent as parent)"""
 //		booParser = BooParser()
 //		m =  booParser.module(code2)
 		
 		parser = TinyAstParser()
-		o = parser.multi_line_pair(code)
+		o = parser.block(code)
 
 		print o
 
