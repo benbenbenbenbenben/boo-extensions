@@ -121,17 +121,14 @@ a0 as (int,1)
 
 		//code ="""false or true and true"""
 		
-		code = """while a < 42"""
+		code = """namespace CPlusPlusStyleComments"""
 		//code = """(parent as parent)"""
 //		booParser = BooParser()
 //		m =  booParser.module(code2)
 		
 		parser = TinyAstParser()
-		o = parser.block(code)
-
-		print o
-
-
+		o = parser.module(code)
+			
 
 
 	def normalize(s as string):

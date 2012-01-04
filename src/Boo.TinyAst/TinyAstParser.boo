@@ -37,13 +37,15 @@ macro prefix:
 
 ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	tokens:
+		at = "@"
 		qq_begin = "[|"
 		qq_end = "|]"
 		splice_begin = "$"
 		equality = "=="
 		inequality = "!="
 		assign = "="
-		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="		
+		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="	
+		xor = "^"		
 		increment = "++"
 		decrement = "--"		
 		plus = "+"
@@ -56,7 +58,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		greater_than = ">"
 		less_than_eq = "<="
 		less_than = "<"
+		bitwise_and = "&"
+		bitwise_or = "|"		
 		colon = ":"
+		semicolon = ";"
 		dot = "."
 		comma = ","
 		kw = (keywords >> value, ~(letter | digit | '_')) ^ value
@@ -106,16 +111,16 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		--EOL,
 		((tqs >> s , EOL) | ""),
 		--EOL,
-		((namespace_declaration >> ns , EOL) | ""),
+		((namespace_declaration >> ns, eol) | ""),
 		--import_declaration >> ids,
-		(block >> b ^ [newMacroStatement(b)]) >> forms,
+		((block >> b ^ [newMacroStatement(b)]) >> forms | ""),
 		--EOL
 	) ^ newModule(ns, s, ids, [], forms)
 
 	//Parsing of forms
 	form = multi_line_pair | single_line_form
 	
-	single_line_form = single_line_pair | (infix_operator >> i) 
+	single_line_form = single_line_pair | infix_operator
 
 	form_stmt = ((multi_line_pair >> f) | (single_line_form >> f, eol)) ^ f
 
@@ -130,25 +135,51 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	begin_block = COLON, INDENT
 	end_block = DEDENT
 	
-	literal = integer | string_literal
+	literal = float | integer | string_literal 
 	integer = (
 		((MINUS | "") >> sign, NUM >> n and (IsValidLong(sign, n)), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.AllowLeadingSign, suffix)) \
 		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
 	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
-
+	
 	string_literal = (sqs | dqs) >> s ^ Literal(s)
 	
+
+	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
+	
+	def newFloat(t):
+		value = double.Parse(t)
+		return Literal(value)
+
+
+	fractional_constant = ((NUM >> a , DOT , NUM >> b) ^ makeString(tokenValue(a),".",tokenValue(b))) | ( (DOT , NUM >> b) ^ makeString(".",tokenValue(b)) ) | ( (NUM >> a , DOT, ~(ID)) ^ makeString(tokenValue(a), ".") )
+    
+	exponent_part = ( ("e" | "E") , exposignopt >> e , NUM >> d ) ^ makeString("e", e, tokenValue(d))
+
+	exposignopt = ( (PLUS | MINUS) >> e ^ makeString(tokenValue(e)) ) | ""
+	
+	floating_suffix = "f" | "l" | "F" | "L" | ""
+
+
+	
 	infix_operator = prefix2
-	prefix2 = (tuple2 >> op, prefix2 >> e ^ Prefix(op, e)) | tuple2
+	prefix2 = (tuple1 >> op, prefix2 >> e ^ Prefix(op, e)) | tuple1
+	
+	tuple1 = (tuple1 >> t, SEMICOLON, assignment >> last ^ newTuple(t, last)) | tuple2
 	
 	tuple2 = (tuple2 >> t, COMMA, assignment >> last ^ newTuple(t, last)) | assignment	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
-	prefix not_expression, NOT, membership_expression		
+	prefix not_expression, NOT, explode_operator
+	prefix explode_operator, STAR , membership_expression
+
 	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), comparison
 	
-	infix comparison, (EQUALITY | INEQUALITY | GREATER_THAN | GREATER_THAN_EQ | LESS_THAN | LESS_THAN_EQ), term	
+	infix comparison, (EQUALITY | INEQUALITY | GREATER_THAN | GREATER_THAN_EQ | LESS_THAN | LESS_THAN_EQ), bitwise_or_expression	
+	
+	infix bitwise_or_expression, BITWISE_OR, bitwise_xor_expression	
+	infix bitwise_xor_expression, XOR, bitwise_and_expression	
+	infix bitwise_and_expression, BITWISE_AND, term
 
 	infix term, (PLUS | MINUS), factor
 	infix factor, (STAR | DIVISION | MODULUS), signalled_expression	
@@ -157,7 +188,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	infix member_reference, DOT, splice
 	
-	prefix splice, SPLICE_BEGIN, atom
+	prefix splice, SPLICE_BEGIN, at_operator
+	prefix at_operator, AT, atom
 	
 	atom = prefix3 | exp_in_brackets | identifier | literal
 	prefix3 = identifier >> op, exp_in_brackets >> e ^ Prefix(op, e)
