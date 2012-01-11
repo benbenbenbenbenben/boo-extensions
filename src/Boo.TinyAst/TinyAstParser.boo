@@ -18,9 +18,9 @@ data Form = \
 	Brackets(Form, Kind as BracketType)  |\
 	Literal(Value as object) |\
 	Infix(Operator as string, Left, Right) |\
-	Prefix(Operator, Operand) |\
+	Prefix(Operator, Operand, IsPostfix as bool) |\
 	Tuple(Forms as (Form)) |\
-	Pair(Left, Right, Multiline as bool) |\
+	Pair(Left, Right, Multiline as bool, Doc as string) |\
 	Block(Forms as (Form))
 
 macro infix:
@@ -33,7 +33,7 @@ macro infixr:
 	
 macro prefix:
 	rule, op, next = prefix.Arguments
-	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op)), e) | $next |])
+	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op)), e, false) | $next |])
 
 ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	tokens:
@@ -54,6 +54,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		star = "*"
 		division = "/"
 		modulus = "%"
+		ones_complement = "~"		
+		bitwise_shift_left = "<<"
+		bitwise_shift_right = ">>"		
 		greater_than_eq = ">="
 		greater_than = ">"
 		less_than_eq = "<="
@@ -98,11 +101,17 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	tqs = (TDQ, --(~tdq, ( (('\\', '$') ^ '$')| _)) >> s, TDQ) ^ makeString(s)
 	eol = ++EOL | ~_
 	
-	space = line_continuation | multi_line_comment | line_comment | super		
+	space = line_continuation | multi_line_comment | line_comment | super
 	
-	line_continuation = "\\", newline	
+	empty_line = ending_spaces, newline	
+	
+	ending_spaces = --end_space >> value ^ value
+	
+	end_space =  semicolon | space
+	
+	line_continuation = "\\", newline
 	multi_line_comment = "/*", --(~"*/", (multi_line_comment | _)), "*/"
-	line_comment = ('#' | "//"), --(~newline, _)	
+	line_comment = ('#' | "//"), --(~newline, _)
 	
 	namespace_declaration = (NAMESPACE, qualified_name)
 	import_declaration = ( (IMPORT, qualified_name >> qn), (((FROM, (dqs | sqs | qualified_name)) | "") >> assembly), ( (AS, ID) | "") >> alias, eol) ^ newImport(qn, assembly, alias)
@@ -122,17 +131,24 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	single_line_form = single_line_pair | infix_operator
 
-	form_stmt = ((multi_line_pair >> f) | (single_line_form >> f, eol)) ^ f
+	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (single_line_form >> f, ( (--SEMICOLON, eol)| --SEMICOLON))) ^ f
 
 	block = (++(form_stmt) >> forms) ^ Block(array(Form, forms as List))		
 
 	single_line_pair = (single_line_pair_prescan >> p and (p isa Pair)) ^ p
-	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false)) | infix_operator
+	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false, null)) | infix_operator
 
 	multi_line_pair = (multi_line_pair_prescan >> p and ((p isa Pair) and (p as Pair).Multiline)) ^ p
-	multi_line_pair_prescan = (multi_line_pair_prescan >> left, begin_block, block >> right, end_block ^ Pair(left, right, true)) | single_line_form
+	multi_line_pair_prescan = (multi_line_pair_prescan >> left, (begin_block_with_doc >> doc | begin_block), block >> right, end_block ^ Pair(left, right, true, doc)) | single_line_form
 
 	begin_block = COLON, INDENT
+	
+	begin_block_with_doc = (COLON,
+		--EOL,
+		tqs >> s,
+		INDENT) ^ s	
+
+
 	end_block = DEDENT
 	
 	literal = float | integer | string_literal 
@@ -142,14 +158,12 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
 	
 	string_literal = (sqs | dqs) >> s ^ Literal(s)
-	
 
 	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
 	
 	def newFloat(t):
 		value = double.Parse(t)
 		return Literal(value)
-
 
 	fractional_constant = ((NUM >> a , DOT , NUM >> b) ^ makeString(tokenValue(a),".",tokenValue(b))) | ( (DOT , NUM >> b) ^ makeString(".",tokenValue(b)) ) | ( (NUM >> a , DOT, ~(ID)) ^ makeString(tokenValue(a), ".") )
     
@@ -158,11 +172,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	exposignopt = ( (PLUS | MINUS) >> e ^ makeString(tokenValue(e)) ) | ""
 	
 	floating_suffix = "f" | "l" | "F" | "L" | ""
-
-
 	
 	infix_operator = prefix2
-	prefix2 = (tuple1 >> op, prefix2 >> e ^ Prefix(op, e)) | tuple1
+	prefix2 = (tuple1 >> op, prefix2 >> e ^ Prefix(op, e, false)) | tuple1
 	
 	tuple1 = (tuple1 >> t, SEMICOLON, assignment >> last ^ newTuple(t, last)) | tuple2
 	
@@ -182,20 +194,26 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infix bitwise_and_expression, BITWISE_AND, term
 
 	infix term, (PLUS | MINUS), factor
-	infix factor, (STAR | DIVISION | MODULUS), signalled_expression	
-	prefix signalled_expression, (MINUS | INCREMENT | DECREMENT), as_operator	
-	infix as_operator, AS, member_reference
+	infix factor, (STAR | DIVISION | MODULUS), bitwise_shift_expression	
+	infix bitwise_shift_expression, (BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT), signalled_expression
+	prefix signalled_expression, (MINUS | INCREMENT | DECREMENT), ones_complement_expression
+	prefix ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
+	infix exponentiation_expression, EXPONENTIATION, as_operator
+	infix as_operator, AS, postfix_operator
+	
+	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op)), e, true)) | member_reference
 	
 	infix member_reference, DOT, splice
+
+	//postfix postfix_operator, (INCREMENT | DECREMENT | STAR), splice
 	
 	prefix splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, atom
 	
 	atom = prefix3 | exp_in_brackets | identifier | literal
-	prefix3 = identifier >> op, exp_in_brackets >> e ^ Prefix(op, e)
-	
+	prefix3 = identifier >> op, exp_in_brackets >> e ^ Prefix(op, e, false)	
 
-	identifier = ID >> s ^ Identifier(tokenValue(s))
+	identifier = (ID >> s ^ Identifier(tokenValue(s))) | (keywords >> s ^ Identifier(s))
 	
 	paren_brackets = (LPAREN, ( form | "" ) >> f, optional_comma, RPAREN) ^  Brackets(f, BracketType.Parenthesis)
 
