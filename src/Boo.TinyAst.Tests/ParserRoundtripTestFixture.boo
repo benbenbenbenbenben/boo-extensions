@@ -84,14 +84,37 @@ class ParserRoundtripTestFixture:
 		
 	[Test]
 	def arrays_1():
+//	Changed from:
+//	
+//	for n, a in zip(names, attributes):
+//		print("\${n} \${a}!")
+//	
+//	to:
+//		
+//	for (n, a) in zip(names, attributes):
+//		print("\${n} \${a}!")		
 		runTestCase("arrays-1.boo")	
 
 	[Test]
 	def arrays_2():
+// Changed from:
+//
+// for i in 1, 2, 3
+//
+// to:
+//
+// for i in (1, 2, 3)
 		runTestCase("arrays-2.boo")	
 
 	[Test]
 	def arrays_3():
+// Changed from:
+//
+// a = 1, b=2, 3
+//
+// to:
+//
+// a = (1, b=2, 3)
 		runTestCase("arrays-3.boo")
 
 	[Test]
@@ -422,6 +445,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Enumerable type shortcut is not supported")]
 	def enumerable_type_shortcut():
 		runTestCase("enumerable-type-shortcut.boo")
 	
@@ -572,6 +596,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Generic placeholders are not supported")]
 	def generics_4():
 		runTestCase("generics-4.boo")
 	
@@ -592,6 +617,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Goto labels are not supported")]
 	def goto_2():
 		runTestCase("goto-2.boo")
 	
@@ -807,6 +833,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Ommited member is not supported")]
 	def omitted_member_target_1():
 		runTestCase("omitted-member-target-1.boo")
 	
@@ -817,11 +844,13 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Regex is not supported")]
 	def regex_literals_1():
 		runTestCase("regex-literals-1.boo")
 	
 
 	[Test]
+	[Ignore("Regex is not supported")]
 	def regex_literals_2():
 		runTestCase("regex-literals-2.boo")
 	
@@ -847,6 +876,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Slicing is not fully supported")]
 	def slicing_1():
 		runTestCase("slicing-1.boo")
 	
@@ -897,6 +927,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Enumerable type shortcut is not supported")]
 	def type_references_1():
 		runTestCase("type-references-1.boo")
 	
