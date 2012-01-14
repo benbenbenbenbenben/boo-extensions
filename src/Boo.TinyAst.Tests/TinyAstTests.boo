@@ -117,17 +117,15 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-
-
-		//code ="""false or true and true"""
 		
-		code = """namespace CPlusPlusStyleComments"""
-		//code = """(parent as parent)"""
+		code = """print('foo'); print('bar') if i > 2; return 3"""
+
 //		booParser = BooParser()
 //		m =  booParser.module(code2)
 		
 		parser = TinyAstParser()
-		o = parser.module(code)
+		o = parser.infix_operator(code)
+		print o
 			
 
 

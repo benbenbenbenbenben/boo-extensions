@@ -126,32 +126,29 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		--EOL
 	) ^ newModule(ns, s, ids, [], forms)
 
-	//Parsing of forms
 	form = multi_line_pair | single_line_form
 	
 	single_line_form = single_line_pair | infix_operator
 
-	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (single_line_form >> f, ( (--SEMICOLON, eol)| --SEMICOLON))) ^ f
+	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (single_line_form >> f, ( (--SEMICOLON, eol)| ++SEMICOLON))) ^ f
 
-	block = (++(form_stmt) >> forms) ^ Block(array(Form, forms as List))		
+	block = (++(form_stmt) >> forms) ^ newBlock(forms)
 
 	single_line_pair = (single_line_pair_prescan >> p and (p isa Pair)) ^ p
 	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false, null)) | infix_operator
 
 	multi_line_pair = (multi_line_pair_prescan >> p and ((p isa Pair) and (p as Pair).Multiline)) ^ p
-	multi_line_pair_prescan = (multi_line_pair_prescan >> left, (begin_block_with_doc >> doc | begin_block), block >> right, end_block ^ Pair(left, right, true, doc)) | single_line_form
+	multi_line_pair_prescan = (multi_line_pair_prescan >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT ^ Pair(left, right, true, doc)) | single_line_form
 
 	begin_block = COLON, INDENT
-	
+
 	begin_block_with_doc = (COLON,
 		--EOL,
 		tqs >> s,
 		INDENT) ^ s	
-
-
-	end_block = DEDENT
 	
 	literal = float | integer | string_literal 
+	
 	integer = (
 		((MINUS | "") >> sign, NUM >> n and (IsValidLong(sign, n)), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.AllowLeadingSign, suffix)) \
 		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
@@ -160,10 +157,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	string_literal = (sqs | dqs) >> s ^ Literal(s)
 
 	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
-	
-	def newFloat(t):
-		value = double.Parse(t)
-		return Literal(value)
 
 	fractional_constant = ((NUM >> a , DOT , NUM >> b) ^ makeString(tokenValue(a),".",tokenValue(b))) | ( (DOT , NUM >> b) ^ makeString(".",tokenValue(b)) ) | ( (NUM >> a , DOT, ~(ID)) ^ makeString(tokenValue(a), ".") )
     
@@ -173,12 +166,13 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	floating_suffix = "f" | "l" | "F" | "L" | ""
 	
-	infix_operator = prefix2
-	prefix2 = (tuple1 >> op, prefix2 >> e ^ Prefix(op, e, false)) | tuple1
+	infix_operator = inline_block
 	
-	tuple1 = (tuple1 >> t, SEMICOLON, assignment >> last ^ newTuple(t, last)) | tuple2
+	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
 	
-	tuple2 = (tuple2 >> t, COMMA, assignment >> last ^ newTuple(t, last)) | assignment	
+	prefix_expression = (prefix_expression >> op, tuple >> e ^ Prefix(op, e, false)) | tuple
+	
+	tuple = (tuple >> t, COMMA, assignment >> last ^ newTuple(t, last)) | assignment
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
@@ -199,19 +193,14 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix signalled_expression, (MINUS | INCREMENT | DECREMENT), ones_complement_expression
 	prefix ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
 	infix exponentiation_expression, EXPONENTIATION, as_operator
-	infix as_operator, AS, postfix_operator
-	
-	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op)), e, true)) | member_reference
-	
-	infix member_reference, DOT, splice
-
-	//postfix postfix_operator, (INCREMENT | DECREMENT | STAR), splice
-	
+	infix as_operator, AS, postfix_operator	
+	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op)), e, true)) | member_reference	
+	infix member_reference, DOT, splice	
 	prefix splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, atom
 	
-	atom = prefix3 | exp_in_brackets | identifier | literal
-	prefix3 = identifier >> op, exp_in_brackets >> e ^ Prefix(op, e, false)	
+	atom = prefix_of_brackets | exp_in_brackets | identifier | literal
+	prefix_of_brackets = identifier >> op, exp_in_brackets >> e ^ Prefix(op, e, false)	
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s))) | (keywords >> s ^ Identifier(s))
 	
@@ -225,47 +214,42 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
 	
-
-	tuple_item_list = (((tuple_item >> first), ++((COMMA, tuple_item >> e) ^ e) >> rest) ^ prepend(first, rest))
-	
-	list_of single_line_form
 	optional_comma = COMMA | ""
 
-	enterListMode = $(enterLM(input))
-	leaveListMode = $(leaveLM(input))
-	listMode = ~~_ and inLM(input)
-
-	def enterLM(input as OMetaInput):
-		if inLM(input): return FailedMatch(input, PredicateFailure("inLM"))
-		return ListMode(input, ListMode(input) + 1)
-		
-	def leaveLM(input as OMetaInput):
-		return ListMode(input, ListMode(input) - 1)	
-
-	def inLM(input as OMetaInput):
-		return ListMode(input) > 0
-		
-	def ListMode(input as OMetaInput) as int:
-		return input.GetMemo("listMode") or 0
-		
-	def ListMode(input as OMetaInput, value as int):
-		return SuccessfulMatch(input.SetMemo("listMode", value), null)
+	def newFloat(t):
+		value = double.Parse(t)
+		return Literal(value)
 
 	def newTuple(f):
 		if f isa Tuple: return f
 		return Tuple(array(Form,f as List))
 
-	def newTuple(t, last):
+	def newTuple(t, last as Form):
 		if t isa Tuple:
 			tu = t as Tuple
-			return Tuple(array(Form, flatten([tu.Forms,last])))
+			return Tuple(tu.Forms + (last,))
 		else:
 			return Tuple(array(Form,[t,last]))
+
+	def newBlock(t as Form, last as Form):
+		return Block((t as Block).Forms + (last,)) if t isa Block
+		return Block((t, last))
 
 	def newMacroStatement(data):
 		m = MacroStatement("tinyAst")
 		m.Annotate("tinyAst", data)
 		return m
+		
+	def newBlock(forms):
+		list = []
+		for form in forms:
+			if form isa Block:
+				for item in (form as Block).Forms:
+					list.Add(item)
+			else:
+				list.Add(form)		
+		return Block(array(Form, list))
+		
 	
 ometa TinyAstEvaluator:
 	ast = stmt	
