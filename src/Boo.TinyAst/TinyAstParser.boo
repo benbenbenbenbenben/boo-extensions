@@ -217,10 +217,18 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op), false, true), e, true)) | member_reference
 	infix member_reference, DOT, splice
 	prefix_symbol splice, SPLICE_BEGIN, at_operator
-	prefix at_operator, AT, atom
+	prefix at_operator, AT, prefix_of_brackets
 	
-	atom = prefix_of_brackets | exp_in_brackets | identifier | literal
-	prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
+	prefix_of_brackets = ((prefix_of_brackets >> op and \
+							(
+								(op isa Identifier and not (op as Identifier).IsKeyword)
+								or (op isa Prefix and (op as Prefix).Operand isa Brackets)
+							)
+						), \
+			exp_in_brackets >> e ^ Prefix(op, e, false)) | atom
+	
+	atom = exp_in_brackets | identifier | literal
+	#prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
