@@ -2,8 +2,8 @@
 
 import System
 import Boo.OMeta
-import Boo.Adt
 import Boo.OMeta.Parser
+import Boo.Lang.Compiler
 import Boo.Lang.Compiler.Ast
 import System.Globalization
 
@@ -13,27 +13,36 @@ enum BracketType:
 	Square
 	Curly
 
-data Form = \
-	Identifier(Name as string) | \
+ast Form = \
+	Identifier(Name as string, IsKeyword as bool, IsSymbol as bool) | \
 	Brackets(Form, Kind as BracketType)  |\
 	Literal(Value as object) |\
-	Infix(Operator as string, Left, Right) |\
+	Infix(Operator as Identifier, Left, Right) |\
 	Prefix(Operator, Operand, IsPostfix as bool) |\
 	Tuple(Forms as (Form)) |\
-	Pair(Left, Right, Multiline as bool, Doc as string) |\
+	Pair(Left, Right, IsMultiline as bool, Doc as string) |\
 	Block(Forms as (Form))
 
 macro infix:
 	l, op, r = infix.Arguments
-	return ExpressionStatement([| $l = ((($l >> l, $op >> op, $r >> r) ^ Infix(tokenValue(op), l, r)) | $r) |])
+	return ExpressionStatement([| $l = ((($l >> l, (~KW >> nkw | ""), (~ID >> nid | ""), $op >> op, $r >> r) ^ Infix(Identifier(tokenValue(op), nkw is null, (not nkw is null ) and (not nid is null)), l, r)) | $r) |])
 	
 macro infixr:
 	l, op, r = infixr.Arguments
-	return ExpressionStatement([| $l = ((($r >> l, $op >> op, $l >> r) ^ Infix(tokenValue(op), l, r)) | $r) |])
+	return ExpressionStatement([| $l = ((($r >> l, $op >> op, $l >> r) ^ Infix(Identifier(tokenValue(op), false, false), l, r)) | $r) |])
 	
 macro prefix:
 	rule, op, next = prefix.Arguments
-	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op)), e, false) | $next |])
+	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op), false, false), e, false) | $next |])
+
+macro prefix_keyword:
+	rule, op, next = prefix_keyword.Arguments
+	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op), true, false), e, false) | $next |])
+
+macro prefix_symbol:
+	rule, op, next = prefix_symbol.Arguments
+	return ExpressionStatement([| $rule = ($op >> op, $rule >> e) ^ Prefix(Identifier(tokenValue(op), false, true), e, false) | $next |])
+
 
 ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	tokens:
@@ -83,7 +92,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		lbrace = "{", enterWhitespaceAgnosticRegion
 		rbrace = "}", leaveWhitespaceAgnosticRegion
 
-	keywords "and", "as", "from", "import", "in", "namespace", "not", "or"
+	keywords "and", "as", "cast", "def", "from", "import", "in", "namespace", "not", "or", "for", "isa", "is", "return"
 	keyword[expected] = ((KW >> t) and (expected is tokenValue(t))) ^ t
 
 	hex_digit = _ >> c as char and ((c >= char('a') and c <= char('f')) or (c >= char('A') and c <= char('F'))) 
@@ -137,7 +146,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	single_line_pair = (single_line_pair_prescan >> p and (p isa Pair)) ^ p
 	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false, null)) | infix_operator
 
-	multi_line_pair = (multi_line_pair_prescan >> p and ((p isa Pair) and (p as Pair).Multiline)) ^ p
+	multi_line_pair = (multi_line_pair_prescan >> p and ((p isa Pair) and (p as Pair).IsMultiline)) ^ p
 	multi_line_pair_prescan = (multi_line_pair_prescan >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT ^ Pair(left, right, true, doc)) | single_line_form
 
 	begin_block = COLON, INDENT
@@ -172,14 +181,22 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	prefix_expression = (prefix_expression >> op, tuple >> e ^ Prefix(op, e, false)) | tuple
 	
-	tuple = (tuple >> t, COMMA, assignment >> last ^ newTuple(t, last)) | assignment
+	tuple = (tuple >> t, COMMA, (assignment >> last | ~assignment) ^ newTuple(t, last)) | brakets_prefix
+	
+	#prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
+	brakets_prefix = ( (brakets_prefix >> op and op isa Brackets), assignment >> e ^ Prefix(op, e, false)) | assignment
+	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
-	prefix not_expression, NOT, explode_operator
-	prefix explode_operator, STAR , membership_expression
+	prefix_keyword not_expression, NOT, explode_operator
+	prefix_symbol explode_operator, STAR , membership_expression
 
-	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), comparison
+	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), identity_test_expression
+	
+	infix identity_test_expression, (((IS, NOT) ^ makeToken("is not")) | IS), isa_expression
+	
+	infix isa_expression, ISA, comparison
 	
 	infix comparison, (EQUALITY | INEQUALITY | GREATER_THAN | GREATER_THAN_EQ | LESS_THAN | LESS_THAN_EQ), bitwise_or_expression	
 	
@@ -190,27 +207,30 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infix term, (PLUS | MINUS), factor
 	infix factor, (STAR | DIVISION | MODULUS), bitwise_shift_expression	
 	infix bitwise_shift_expression, (BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT), signalled_expression
-	prefix signalled_expression, (MINUS | INCREMENT | DECREMENT), ones_complement_expression
-	prefix ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
+	prefix_symbol signalled_expression, (MINUS | INCREMENT | DECREMENT), ones_complement_expression
+	prefix_symbol ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
 	infix exponentiation_expression, EXPONENTIATION, as_operator
-	infix as_operator, AS, postfix_operator	
-	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op)), e, true)) | member_reference	
-	infix member_reference, DOT, splice	
-	prefix splice, SPLICE_BEGIN, at_operator
+	infix as_operator, AS, cast_operator
+	
+	infix cast_operator, CAST, postfix_operator
+	
+	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op), false, true), e, true)) | member_reference
+	infix member_reference, DOT, splice
+	prefix_symbol splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, atom
 	
 	atom = prefix_of_brackets | exp_in_brackets | identifier | literal
-	prefix_of_brackets = identifier >> op, exp_in_brackets >> e ^ Prefix(op, e, false)	
+	prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
 
-	identifier = (ID >> s ^ Identifier(tokenValue(s))) | (keywords >> s ^ Identifier(s))
+	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
-	paren_brackets = (LPAREN, ( form | "" ) >> f, optional_comma, RPAREN) ^  Brackets(f, BracketType.Parenthesis)
+	paren_brackets = (LPAREN, ( form | "" ) >> f, RPAREN) ^  Brackets(f, BracketType.Parenthesis)
 
 	qq_brackets = ((QQ_BEGIN, INDENT, block >> f, DEDENT, QQ_END) | (QQ_BEGIN, form >> f, QQ_END)) ^ Brackets(f, BracketType.QQ)
 	
-	square_brackets = (LBRACK, ( form | "") >> f, optional_comma, RBRACK) ^ Brackets(f, BracketType.Square)
+	square_brackets = (LBRACK, ( form | "") >> f, RBRACK) ^ Brackets(f, BracketType.Square)
 	
-	curly_brackets = (LBRACE, ( form | "") >> f, optional_comma, RBRACE) ^ Brackets(f, BracketType.Curly)
+	curly_brackets = (LBRACE, ( form | "") >> f, RBRACE) ^ Brackets(f, BracketType.Curly)
 	
 	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
 	
@@ -227,8 +247,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	def newTuple(t, last as Form):
 		if t isa Tuple:
 			tu = t as Tuple
+			return t if last is null
 			return Tuple(tu.Forms + (last,))
 		else:
+			return Tuple(array(Form,[t])) if last is null
 			return Tuple(array(Form,[t,last]))
 
 	def newBlock(t as Form, last as Form):
@@ -249,6 +271,24 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 			else:
 				list.Add(form)		
 		return Block(array(Form, list))
+		
+	def newModule(ns as string, doc, imports, members, stmts):
+		m = Module(Documentation: doc)
+		
+		if ns is not null:
+			m.Namespace = NamespaceDeclaration(ns)
+		
+		for item in imports: m.Imports.Add(item)
+		for member in flatten(members):
+			if member isa Ast.Attribute:
+				m.AssemblyAttributes.Add(member)
+			elif member isa MacroStatement:
+				m.Globals.Add(member as Statement)
+			else:
+				m.Members.Add(member)
+		for stmt as Statement in flatten(stmts): m.Globals.Add(stmt)
+		return m
+		
 		
 	
 ometa TinyAstEvaluator:

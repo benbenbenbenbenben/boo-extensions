@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <PropertyGroup>
-    <ProjectGuid>{5E3584E2-1BD0-49DA-815B-2DDA724C565F}</ProjectGuid>
+    <ProjectGuid>{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <OutputType>Library</OutputType>
-    <RootNamespace>Boo.TinyAst</RootNamespace>
-    <AssemblyName>Boo.TinyAst</AssemblyName>
+    <RootNamespace>Boo.TinyAst.Macro</RootNamespace>
+    <AssemblyName>Boo.TinyAst.Macro</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
   </PropertyGroup>
@@ -40,29 +40,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AfterMacroExpansionMacro.boo" />
     <Compile Include="AssemblyInfo.boo" />
-    <Compile Include="Module.boo" />
-    <Compile Include="TinyAstMacro.boo" />
-    <Compile Include="TinyAstParser.boo" />
-    <Compile Include="TinyAstParserStep.boo" />
-    <Compile Include="TinyAstPrinterVisitor.boo" />
+    <Compile Include="AstMacro.boo" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Boo.Adt\Boo.Adt.booproj">
       <Project>{18AF07E6-C62E-4CDC-8F58-5A0F9A872F7F}</Project>
       <Name>Boo.Adt</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Boo.OMeta.Parser\Boo.OMeta.Parser.booproj">
-      <Project>{5A702DAA-43C7-45FF-9A9E-7A334FD75DD9}</Project>
-      <Name>Boo.OMeta.Parser</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Boo.OMeta\Boo.OMeta.booproj">
-      <Project>{EED6C932-8AEE-42CB-8837-C323DC74980B}</Project>
-      <Name>Boo.OMeta</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Boo.TinyAst.Macro\Boo.TinyAst.Macro.booproj">
-      <Project>{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}</Project>
-      <Name>Boo.TinyAst.Macro</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(BooBinPath)\Boo.Microsoft.Build.targets" />

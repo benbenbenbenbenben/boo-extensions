@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-# SharpDevelop 4.1.0.8000
+# SharpDevelop 4.0.0.7070
 Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.OMeta", "Boo.OMeta.booproj", "{EED6C932-8AEE-42CB-8837-C323DC74980B}"
 EndProject
 Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.OMeta.Tests", "..\Boo.OMeta.Tests\Boo.OMeta.Tests.booproj", "{39203C2D-10BB-4FD5-8B84-241908614FFA}"
@@ -17,6 +17,8 @@ EndProject
 Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.TinyAst", "..\Boo.TinyAst\Boo.TinyAst.booproj", "{5E3584E2-1BD0-49DA-815B-2DDA724C565F}"
 EndProject
 Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.TinyAst.Tests", "..\Boo.TinyAst.Tests\Boo.TinyAst.Tests.booproj", "{9AF43C11-68A7-492E-BC9E-924349BE92BD}"
+EndProject
+Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.TinyAst.Macro", "..\Boo.TinyAst.Macro\Boo.TinyAst.Macro.booproj", "{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,5 +58,9 @@ Global
 		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Debug|x86.ActiveCfg = Debug|x86
 		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Release|x86.Build.0 = Release|x86
 		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Release|x86.ActiveCfg = Release|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Debug|x86.Build.0 = Debug|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Debug|x86.ActiveCfg = Debug|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Release|x86.Build.0 = Release|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Release|x86.ActiveCfg = Release|x86
 	EndGlobalSection
 EndGlobal

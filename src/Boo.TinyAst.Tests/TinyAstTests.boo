@@ -118,7 +118,7 @@ a0 as (int,1)
 	[Test]
 	def TinyAstTest1():
 		
-		code = """print('foo'); print('bar') if i > 2; return 3"""
+		code = """for (n, a) in zip(names, attributes)"""
 
 //		booParser = BooParser()
 //		m =  booParser.module(code2)

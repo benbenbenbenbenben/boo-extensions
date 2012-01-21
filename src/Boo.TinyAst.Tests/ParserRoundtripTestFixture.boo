@@ -2,7 +2,6 @@
 
 import System.IO
 
-import Boo.Lang.Compiler.Ast
 import Boo.Lang.Compiler.IO
 import Boo.Lang.Compiler.Steps
 import Boo.OMeta
@@ -33,10 +32,11 @@ class ParserRoundtripTestFixture:
 	def OMetaParse(code as string):
 		parser = TinyAstParser()
 		match parser.module(code):
-			case SuccessfulMatch(Input: input, Value: m=Module()):
+			case SuccessfulMatch(Input: input, Value: m=Boo.TinyAst.Module()):
 				assert m is not null
 				assert m.Documentation is not null
-				//Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
+				s = m.ToCodeString()
+				Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
 				assert input.IsEmpty, input.ToString()
 
 
