@@ -1,7 +1,6 @@
 """
 def foo():
-	return { print('foo') }
-
+	return {print('foo')}
 print(foo()())
 """
 def foo():

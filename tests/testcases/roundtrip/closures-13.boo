@@ -1,7 +1,7 @@
 """
 def foo():
-	return [1, 2, 3].Find({ item as int | return (item > 2) })
-
+	return ([1, 2, 3] . Find()) do((item as int)):
+		return (item > 2)
 print(foo())
 """
 def foo():

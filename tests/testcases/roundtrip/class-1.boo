@@ -1,25 +1,18 @@
 """
 class Person:
-
 	_id as string
-
 	_fname as string
-
 	def constructor(id as string, fname as string):
 		_id = id
 		_fname = fname
-
-	def getID() as string:
+	def (getID() as string):
 		return _id
-
-	def getFirstName() as string:
+	def (getFirstName() as string):
 		return _fname
-
 	def dump():
 		pass
-
 p = Person('1111', 'Bamboo')
-p.dump()
+p . dump()
 """
 class Person:
 
