@@ -1,10 +1,8 @@
 """
 class Foo:
 	pass
-
 def bar():
 	f = Foo()
-
 bar()
 """
 class Foo:

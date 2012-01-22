@@ -2,7 +2,7 @@
 class Person:
 	_id as string
 	_fname as string
-	def constructor(id as string, fname as string):
+	def constructor((id as string), (fname as string)):
 		_id = id
 		_fname = fname
 	def (getID() as string):

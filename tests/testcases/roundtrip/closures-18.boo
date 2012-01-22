@@ -1,8 +1,9 @@
 """
 i = 3
-a = def ():
+a = {
 	raise 'uh, oh...' if (i < 2)
 	print(i)
+}
 """
 i = 3
 a = { raise "uh, oh..." if i < 2; print(i) }
