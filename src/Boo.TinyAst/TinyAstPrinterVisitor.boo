@@ -84,7 +84,10 @@ afterMacroExpansion:
 					for item in node.Forms:
 						if commaNeeded:
 							Write(", ")
+						Write("(") if item isa Infix	
 						item.Accept(self)
+						Write(")") if item isa Infix
+						
 						commaNeeded = true
 				
 				Write(",") if len(node.Forms) == 1 

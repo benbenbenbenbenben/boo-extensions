@@ -227,8 +227,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 						), \
 			exp_in_brackets >> e ^ Prefix(op, e, false)) | atom
 	
-	atom = exp_in_brackets | identifier | literal
-	#prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
+	atom = exp_in_brackets | identifier | literal	
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
