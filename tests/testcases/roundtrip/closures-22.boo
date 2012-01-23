@@ -1,5 +1,5 @@
 """
-a = def():
+a = def ():
 	pass
 foo():
 	pass

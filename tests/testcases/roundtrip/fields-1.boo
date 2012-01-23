@@ -1,6 +1,5 @@
 """
 class Foo:
-
 	bar
 """
 class Foo:

@@ -1,6 +1,6 @@
 """
 class Foo:
-	bar = def(msg):
+	bar = def (msg):
 		print(msg)
 """
 class Foo:
