@@ -98,10 +98,13 @@ afterMacroExpansion:
 					Write(" ")
 					node.Operator.Accept(self)
 				else:
+					Write("(") if node.Operator isa Infix
 					node.Operator.Accept(self)
+					Write(")") if node.Operator isa Infix
+					
 					if (not node.Operand isa Brackets) or (node.Operator isa Identifier and (node.Operator as Identifier).IsKeyword):
 						Write(" ") if not (node.Operator isa Identifier and (node.Operator as Identifier).IsSymbol)
-					Write("(") if node.Operand isa Infix				
+					Write("(") if node.Operand isa Infix
 					node.Operand.Accept(self)
 					Write(")") if node.Operand isa Infix
 
@@ -124,7 +127,10 @@ afterMacroExpansion:
 			
 			override def OnLiteral(node as Literal):				
 				Write("'") if node.Value isa string
-				Write(node.Value.ToString())
+				if node.Value isa double:
+					Write((node.Value cast double).ToString("########0.0##########", System.Globalization.CultureInfo.InvariantCulture))
+				else:
+					Write(node.Value.ToString())
 				Write("'") if node.Value isa string
 				
 			override def OnBrackets(node as Brackets):
