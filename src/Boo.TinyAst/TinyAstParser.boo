@@ -181,7 +181,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	prefix_expression = (prefix_expression >> op, tuple >> e ^ Prefix(op, e, false)) | tuple
 	
-	tuple = (tuple >> t, COMMA, (assignment >> last | ~assignment) ^ newTuple(t, last)) | brakets_prefix
+	tuple = (tuple >> t, COMMA, (assignment >> last | "") ^ newTuple(t, last)) | brakets_prefix
 	
 	#prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
 	brakets_prefix = ( (brakets_prefix >> op and op isa Brackets), assignment >> e ^ Prefix(op, e, false)) | assignment
@@ -219,13 +219,20 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, prefix_of_brackets
 	
-	prefix_of_brackets = ((prefix_of_brackets >> op and \
-							(
-								(op isa Identifier and not (op as Identifier).IsKeyword)
-								or (op isa Prefix and (op as Prefix).Operand isa Brackets)
-							)
-						), \
-			exp_in_brackets >> e ^ Prefix(op, e, false)) | atom
+	prefix_of_brackets = (
+							(prefix_of_brackets >> op and 
+								(
+									(op isa Identifier and not (op as Identifier).IsKeyword)
+									or (op isa Prefix and (op as Prefix).Operand isa Brackets)
+								)
+							), 	exp_in_brackets >> e ^ Prefix(op, e, false)
+						 ) | \
+						 (
+							(prefix_of_brackets >> op and (op isa Identifier and (op as Identifier).IsKeyword)), ~(tuple >> io and (io isa Infix)), 
+								exp_in_brackets >> e ^ Prefix(op, e, false)
+						 
+						 ) | \
+						 atom
 	
 	atom = exp_in_brackets | identifier | literal	
 
