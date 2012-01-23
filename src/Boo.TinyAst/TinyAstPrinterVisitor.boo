@@ -129,6 +129,9 @@ afterMacroExpansion:
 				Write("'") if node.Value isa string
 				if node.Value isa double:
 					Write((node.Value cast double).ToString("########0.0##########", System.Globalization.CultureInfo.InvariantCulture))
+				elif node.Value isa long:
+					Write(node.Value.ToString())
+					Write("L") if node.Value cast long > int.MaxValue or node.Value cast long < int.MinValue
 				else:
 					Write(node.Value.ToString())
 				Write("'") if node.Value isa string

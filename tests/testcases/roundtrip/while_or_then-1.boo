@@ -1,6 +1,6 @@
 """
 while false:
-	x++
+	x ++
 or:
 	print 'skipped'
 then:

@@ -118,13 +118,13 @@ a0 as (int,1)
 	[Test]
 	def TinyAstTest1():
 		
-		code = """for (n, a) in zip(names, attributes)"""
+		code = """return [1, 2, 3].Find() do"""
 
 //		booParser = BooParser()
 //		m =  booParser.module(code2)
 		
 		parser = TinyAstParser()
-		o = parser.infix_operator(code)
+		o = parser.block(code)
 		print o
 			
 
