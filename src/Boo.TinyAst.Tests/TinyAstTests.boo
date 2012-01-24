@@ -118,7 +118,7 @@ a0 as (int,1)
 	[Test]
 	def TinyAstTest1():
 		
-		code = """return [1, 2, 3].Find() do"""
+		code = """.operation() if"""
 
 //		booParser = BooParser()
 //		m =  booParser.module(code2)

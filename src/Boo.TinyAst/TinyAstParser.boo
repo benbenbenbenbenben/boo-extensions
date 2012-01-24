@@ -25,7 +25,10 @@ ast Form = \
 
 macro infix:
 	l, op, r = infix.Arguments
-	return ExpressionStatement([| $l = ((($l >> l, (~KW >> nkw | ""), (~ID >> nid | ""), $op >> op, $r >> r) ^ Infix(Identifier(tokenValue(op), nkw is null, (not nkw is null ) and (not nid is null)), l, r)) | $r) |])
+	return ExpressionStatement([| $l = ((( $l >> l and (not l isa Identifier or not (l as Identifier).IsKeyword), 
+				(~KW >> nkw | ""), (~ID >> nid | ""), $op >> op, 
+				$r >> r) 
+				^ Infix(Identifier(tokenValue(op), nkw is null, (not nkw is null ) and (not nid is null)), l, r)) | $r) |])
 	
 macro infixr:
 	l, op, r = infixr.Arguments
@@ -92,7 +95,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		lbrace = "{", enterWhitespaceAgnosticRegion
 		rbrace = "}", leaveWhitespaceAgnosticRegion
 
-	keywords "and", "as", "cast", "def", "from", "import", "in", "namespace", "not", "or", "for", "isa", "is", "return"
+	keywords "and", "as", "cast", "def", "from", "import", "if", "in", "namespace", "not", "or", "for", "isa", "is", "return"
 	keyword[expected] = ((KW >> t) and (expected is tokenValue(t))) ^ t
 
 	hex_digit = _ >> c as char and ((c >= char('a') and c <= char('f')) or (c >= char('A') and c <= char('F'))) 
@@ -183,14 +186,13 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	tuple = (tuple >> t, COMMA, (assignment >> last | "") ^ newTuple(t, last)) | brakets_prefix
 	
-	#prefix_of_brackets = (identifier >> op and not (op as Identifier).IsKeyword), exp_in_brackets >> e ^ Prefix(op, e, false)
 	brakets_prefix = ( (brakets_prefix >> op and op isa Brackets), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
-	prefix_keyword not_expression, NOT, explode_operator
-	prefix_symbol explode_operator, STAR , membership_expression
+	prefix_keyword not_expression, NOT, membership_expression
+	#prefix_symbol explode_operator, STAR , membership_expression
 
 	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), identity_test_expression
 	
@@ -217,8 +219,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op), false, true), e, true)) | member_reference
 	infix member_reference, DOT, splice
 	prefix_symbol splice, SPLICE_BEGIN, at_operator
-	prefix at_operator, AT, prefix_of_brackets
-	
+	prefix at_operator, AT, high_priority_prefix
+
+	high_priority_prefix = (~atom, (STAR | DOT) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
+
 	prefix_of_brackets = (
 							(prefix_of_brackets >> op and 
 								(
@@ -238,6 +242,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
+	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
+
 	paren_brackets = (LPAREN, ( form | "" ) >> f, RPAREN) ^  Brackets(f, BracketType.Parenthesis)
 
 	qq_brackets = ((QQ_BEGIN, INDENT, block >> f, DEDENT, QQ_END) | (QQ_BEGIN, form >> f, QQ_END)) ^ Brackets(f, BracketType.QQ)
@@ -245,8 +251,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	square_brackets = (LBRACK, ( form | "") >> f, RBRACK) ^ Brackets(f, BracketType.Square)
 	
 	curly_brackets = (LBRACE, ( form | "") >> f, RBRACE) ^ Brackets(f, BracketType.Curly)
-	
-	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
 	
 	optional_comma = COMMA | ""
 

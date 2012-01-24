@@ -833,7 +833,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
-	[Ignore("Ommited member is not supported")]
+	//[Ignore("Ommited member is not supported")]
 	def omitted_member_target_1():
 		runTestCase("omitted-member-target-1.boo")
 	
@@ -912,6 +912,7 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Timespan literals are not supported")]
 	def timespan_literals_1():
 		runTestCase("timespan-literals-1.boo")
 	
