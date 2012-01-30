@@ -159,25 +159,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		tqs >> s,
 		INDENT) ^ s	
 	
-	literal = float | integer | string_literal 
-	
-	integer = (
-		((MINUS | "") >> sign, NUM >> n and (IsValidLong(sign, n)), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.AllowLeadingSign, suffix)) \
-		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
-	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
-	
-	string_literal = (sqs | dqs) >> s ^ Literal(s)
-
-	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
-
-	fractional_constant = ((NUM >> a , DOT , NUM >> b) ^ makeString(tokenValue(a),".",tokenValue(b))) | ( (DOT , NUM >> b) ^ makeString(".",tokenValue(b)) ) | ( (NUM >> a , DOT, ~(ID)) ^ makeString(tokenValue(a), ".") )
-    
-	exponent_part = ( ("e" | "E") , exposignopt >> e , NUM >> d ) ^ makeString("e", e, tokenValue(d))
-
-	exposignopt = ( (PLUS | MINUS) >> e ^ makeString(tokenValue(e)) ) | ""
-	
-	floating_suffix = "f" | "l" | "F" | "L" | ""
-	
 	infix_operator = inline_block
 	
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
@@ -192,7 +173,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
 	prefix_keyword not_expression, NOT, membership_expression
-	#prefix_symbol explode_operator, STAR , membership_expression
+	#prefix_symbol explode_operator, STAR , membership_expression //(possible conflict with high_priority_prefix)
 
 	infix membership_expression, (IN | ((NOT, IN) ^ makeToken("not in"))), identity_test_expression
 	
@@ -221,7 +202,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, high_priority_prefix
 
-	high_priority_prefix = (~atom, (STAR | DOT) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
+	high_priority_prefix = (~atom /*not float, ex: .001*/, (STAR | DOT) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
 
 	prefix_of_brackets = (
 							(prefix_of_brackets >> op and 
@@ -234,7 +215,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 						 (
 							(prefix_of_brackets >> op and (op isa Identifier and (op as Identifier).IsKeyword)), ~(tuple >> io and (io isa Infix)), 
 								exp_in_brackets >> e ^ Prefix(op, e, false)
-						 
 						 ) | \
 						 atom
 	
@@ -252,7 +232,24 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	curly_brackets = (LBRACE, ( form | "") >> f, RBRACE) ^ Brackets(f, BracketType.Curly)
 	
-	optional_comma = COMMA | ""
+	literal = float | integer | string_literal 
+	
+	integer = (
+		((MINUS | "") >> sign, NUM >> n and (IsValidLong(sign, n)), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.AllowLeadingSign, suffix)) \
+		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
+	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
+	
+	string_literal = (sqs | dqs) >> s ^ Literal(s)
+
+	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
+
+	fractional_constant = ((NUM >> a , DOT , NUM >> b) ^ makeString(tokenValue(a),".",tokenValue(b))) | ( (DOT , NUM >> b) ^ makeString(".",tokenValue(b)) ) | ( (NUM >> a , DOT, ~(ID)) ^ makeString(tokenValue(a), ".") )
+    
+	exponent_part = ( ("e" | "E") , exposignopt >> e , NUM >> d ) ^ makeString("e", e, tokenValue(d))
+
+	exposignopt = ( (PLUS | MINUS) >> e ^ makeString(tokenValue(e)) ) | ""
+	
+	floating_suffix = "f" | "l" | "F" | "L" | ""	
 
 	def newFloat(t):
 		value = double.Parse(t)
