@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.boo" />
+    <Compile Include="EvaluationRoundtripTestFixture.boo" />
     <Compile Include="ParserRoundtripTestFixture.boo" />
     <Compile Include="TestMacroMacro.boo" />
     <Compile Include="TinyAstTests.boo" />
