@@ -1,8 +1,15 @@
 ﻿namespace Boo.TinyAst
 
 import System
-import Boo.TinyAst.Macro
 import Boo.Lang.PatternMatching
+import Boo.Lang.Compiler.Ast
+import Boo.TinyAst
+
+macro afterMacroExpansion:
+	for stmt in afterMacroExpansion.Body.Statements:
+		match stmt:
+			case YieldStatement(Expression: QuasiquoteExpression(Node: node)):
+				yield node
 
 afterMacroExpansion:
 	yield [|

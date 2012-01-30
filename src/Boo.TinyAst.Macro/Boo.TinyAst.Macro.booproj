@@ -40,7 +40,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AfterMacroExpansionMacro.boo" />
     <Compile Include="AssemblyInfo.boo" />
     <Compile Include="AstMacro.boo" />
   </ItemGroup>
