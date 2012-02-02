@@ -679,7 +679,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	array_literal_multi = (LPAREN, array_literal_type >> type, assignment >> e, ++(COMMA, assignment) >> tail, (COMMA | ""), RPAREN) ^ newArrayLiteral(type, prepend(e, tail))
 			
-	array_literal_type = ((OF, ranked_type_reference >> type, COLON) | "") ^ type
+	array_literal_type = ((OF, type_reference >> type, COLON) ^ ArrayTypeReference(ElementType: type, Rank: null) | "") 
 
 	ranked_type_reference = ((type_reference >> type), ((COMMA,  integer >> rank) | "")) ^ ArrayTypeReference(ElementType: type, Rank: rank) 
 	
@@ -712,7 +712,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 
 	exposignopt = ( (PLUS | MINUS) >> e ^ makeString(tokenValue(e)) ) | ""
 	
-	floating_suffix = "f" | "l" | "F" | "L" | ""
+	floating_suffix = "f" | "F" | ""
 	
 	boolean = true_literal | false_literal
 	
