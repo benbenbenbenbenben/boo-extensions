@@ -300,24 +300,40 @@ class OMetaMacroRuleProcessor:
 		input = uniqueName()
 		
 		currentBlock = block
+		code as IfStatement
 		for temp as Expression, rule as Expression in rules:
-			block.Add([| $input = OMetaInput.Singleton($temp) |])
-			expand block, rule, input, lastMatch
+			if code:
+				currentBlock.Add(code)
+				currentBlock = code.TrueBlock
+			
+			currentBlock.Add(inputForObjectPatternRule(rule, temp, input))
+			expand currentBlock, rule, input, lastMatch
 			code = [|
 				if $lastMatch isa SuccessfulMatch:
 					pass
 			|]
-			currentBlock.Add(code)
-			currentBlock = code.TrueBlock
 		return block
+		
+	def inputForObjectPatternRule(rule as Expression, temp as Expression, input as ReferenceExpression):
+		inputCode as Statement
+		match rule:
+			case BinaryExpression(Left: ReferenceExpression(Name: "_")) | BinaryExpression(Left: BinaryExpression(Left: ReferenceExpression(Name: "_"))) | ReferenceExpression(Name: "_"):
+				inputCode = ExpressionStatement([| $input = OMetaInput.Singleton($temp)	|])
+			otherwise:
+				inputCode = [| 
+					if $temp isa System.Collections.IEnumerable:
+						$input = OMetaInput.For($temp)					
+					else:
+						$input = OMetaInput.Singleton($temp)
+				|]		
+		return inputCode
 		
 	def processObjectPatternRules(rules as List, pattern as MethodInvocationExpression):
 		for arg in pattern.NamedArguments:
 			match arg.Second:
-				case [| $_ >> $_ |]:
+				case MemberReferenceExpression():
+					pass
+				otherwise:
 					temp = uniqueName()
 					rules.Add((temp, arg.Second))
 					arg.Second = temp
-				otherwise:
-					pass
-			
