@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.boo" />
     <Compile Include="Module.boo" />
+    <Compile Include="TinyAstEvaluator.boo" />
     <Compile Include="TinyAstMacro.boo" />
     <Compile Include="TinyAstParser.boo" />
     <Compile Include="TinyAstParserStep.boo" />

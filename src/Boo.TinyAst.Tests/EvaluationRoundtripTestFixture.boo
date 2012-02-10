@@ -23,11 +23,9 @@ class EvaluationRoundtripTestFixture:
 		cu = o.CompileUnit	
 		m = cu.Modules[0]		
  		#print m
-
 		assert m is not null
 		assert m.Documentation is not null
 		Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
-		
 
 	def OMetaParse(code as string):
 		parser = TinyAstParser()
@@ -35,10 +33,8 @@ class EvaluationRoundtripTestFixture:
 			case SuccessfulMatch(Input: input, Value: m=Boo.TinyAst.Module()):
 				assert m is not null
 				assert m.Documentation is not null
-				s = m.ToCodeString()
 				Assert.AreEqual(normalize(m.Documentation), normalize(m.ToCodeString()))
 				assert input.IsEmpty, input.ToString()
-
 
 	def OMetaParseAndRun(code as string):
 		compiler = Boo.Lang.Compiler.BooCompiler()
@@ -64,11 +60,11 @@ class EvaluationRoundtripTestFixture:
 		
 		return Path.Combine(
 					findSiblingBooExtensionsDirectory(parentDirectory(System.Environment.CurrentDirectory)),
-					"tests/testcases/parser/roundtrip")
+					"tests/testcases/evaluation")
 		
 	def findSiblingBooExtensionsDirectory(dir as string) as string:
 		
-		booDir = Path.Combine(dir, "boo")
+		booDir = Path.Combine(dir, "boo-extensions")
 		if Directory.Exists(booDir): return booDir
 		
 		parent = parentDirectory(dir)

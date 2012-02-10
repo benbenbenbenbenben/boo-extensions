@@ -41,7 +41,6 @@ class ObjectMatchingTest:
 		ometa EmployeeClassMatching:
 			firstName = "John", ~_
 			lastName = "Lennon", ~_
-			//example1 = A(first: _ >> f and (f isa string), first: one, second: two)
 			checkJohnLennon = Employee(FirstName: firstName, LastName: lastName)
 	
 		match EmployeeClassMatching().checkJohnLennon(OMetaInput.Singleton(Employee("John", "Lennon"))):

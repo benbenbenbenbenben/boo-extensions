@@ -16,7 +16,7 @@ enum BracketType:
 ast Form = \
 	Identifier(Name as string, IsKeyword as bool, IsSymbol as bool) | \
 	Brackets(Form, Kind as BracketType)  |\
-	Literal(Value as object) |\
+	Literal(Value as object, astLiteral as LiteralExpression) |\
 	Infix(Operator as Identifier, Left, Right) |\
 	Prefix(Operator, Operand, IsPostfix as bool) |\
 	Tuple(Forms as (Form)) |\
@@ -218,7 +218,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 						 ) | \
 						 atom
 	
-	atom = exp_in_brackets | identifier | literal	
+	atom = exp_in_brackets | identifier | literal
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
@@ -237,9 +237,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	integer = (
 		((MINUS | "") >> sign, NUM >> n and (IsValidLong(sign, n)), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.AllowLeadingSign, suffix)) \
 		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
-	) >> i ^ Literal((i as IntegerLiteralExpression).Value)
+	) >> i ^ Literal((i as IntegerLiteralExpression).Value, i)
 	
-	string_literal = (sqs | dqs) >> s ^ Literal(s)
+	string_literal = (sqs | dqs) >> s ^ Literal(s, newStringLiteral(s))
 
 	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
 
@@ -249,11 +249,11 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	exposignopt = ( (PLUS | MINUS) >> e ^ makeString(tokenValue(e)) ) | ""
 	
-	floating_suffix = "f" | "l" | "F" | "L" | ""	
+	floating_suffix = "f" | "F" | ""
 
 	def newFloat(t):
 		value = double.Parse(t)
-		return Literal(value)
+		return Literal(value, DoubleLiteralExpression(Value: value))
 
 	def newTuple(f):
 		if f isa Tuple: return f
@@ -303,31 +303,5 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 				m.Members.Add(member)
 		for stmt as Statement in flatten(stmts): m.Globals.Add(stmt)
 		return m
-		
-		
-	
-ometa TinyAstEvaluator:
-	ast = stmt	
-	stmt = stmt_line
-	stmt_line = stmt_expression
-	stmt_expression = assignment
-	
-	expression = binary_expression | atom 	
-	atom = boolean
-
-	boolean = true_literal | false_literal
-	
-	true_literal = Identifier(Name:"true") ^ [| true |]
-	
-	false_literal = Identifier(Name: "false") ^ [| false |]	
-	
-	binary_operator = ( (_ >> a and (a == "or" )) ^ Token("or", "or")) | ( (_ >> a and (a == "and" )) ^ Token("and","and"))		
-	
-	binary_expression = Infix(Operator:binary_operator >> op, Left:expression >> l, Right:expression >> r) ^ newInfixExpression(op, l, r)
-	
-	reference = Identifier() >> r ^ ReferenceExpression(Name: (r as Identifier).Name)
-	
-	assignment = Infix(Operator:"=", Left:reference >> l, Right: expression >> r) ^ newInfixExpression(Token("=", "="), l, r)
-		
 
 	
