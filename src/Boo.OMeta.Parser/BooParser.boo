@@ -656,7 +656,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	self_literal = SELF ^ [| self |]
 	
-	string_literal = string_interpolation| ( ((tqs | dqs | sqs) >> s) ^ newStringLiteral(s))
+	string_literal =  (tqs | dqs | sqs) >> s ^ newStringLiteral(s)
 
 	string_interpolation = (
 		DQ,
