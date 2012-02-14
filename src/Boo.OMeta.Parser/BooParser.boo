@@ -658,14 +658,13 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	string_literal =  (tqs | dqs | sqs) >> s ^ newStringLiteral(s)
 
-	string_interpolation = (
-		DQ,
-		--(
+	string_interpolation = DQ, string_interpolation_items >> items, DQ ^ newStringInterpolation(items)
+		
+	string_interpolation_items = --(
 			((++(~('"' | '$'), string_char) >> s) ^ StringLiteralExpression(makeString(s)))
 			| (('${', expression >> v, --space, '}') ^ v)
 			| ('$', atom)
-			) >> items,
-		DQ) ^ newStringInterpolation(items)
+			) >> items ^ items
 		
 	reg_exp_string = ( (((~"/*","/") | "@/"), (--(~"/", _) >> s), "/")  ) ^ RELiteralExpression(makeString("/", s, "/"))		
 		
