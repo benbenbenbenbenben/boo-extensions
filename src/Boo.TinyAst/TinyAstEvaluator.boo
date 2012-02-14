@@ -3,6 +3,7 @@
 import System
 import Boo.OMeta
 import Boo.OMeta.Parser
+import Boo.Lang.Compiler
 import Boo.Lang.Compiler.Ast
 import Boo.Lang.Compiler.Ast as AST
 import Boo.Lang.PatternMatching
@@ -29,7 +30,7 @@ it generates:
 				e.LexicalInfo = stmt.LexicalInfo
 				block.Add(e)
 
-ometa TinyAstEvaluator:
+ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	keywordsAndTokens:
 		OR = "or"
@@ -46,11 +47,12 @@ ometa TinyAstEvaluator:
 	stmt_expression = assignment
 	stmt_block = stmt_for
 	
-		
 	#expression = binary_expression | invocation | atom
 	atom = reference | array_literal | boolean | literal
 	
-	literal = Literal() >> l  ^ (l as Literal).astLiteral
+	literal = Literal(Value: string_interpolation >> si) ^ si | (Literal() >> l ^ (l as Literal).astLiteral)
+	
+	string_interpolation = $(callExternalParser("string_interpolation_items", "Boo.OMeta.Parser.BooParser", input)) >> items ^ newStringInterpolation(items)
 	
 	array_literal = array_literal_multi
 	
@@ -62,7 +64,7 @@ ometa TinyAstEvaluator:
 
 	boolean = true_literal | false_literal
 	
-	true_literal = TRUE ^ [| true |]	
+	true_literal = TRUE ^ [| true |]
 	false_literal = FALSE ^ [| false |]
 	
 	#binary_operator = ( Identifier(Name: "or") ^ Token("or", "or")) | ( Identifier(Name: "and") ^ Token("and","and"))
@@ -95,3 +97,34 @@ ometa TinyAstEvaluator:
 						Prefix(Operator: FOR, Operand: Infix(Operator: IN, Left: declaration >> dl, Right: assignment >> e)),
 					Right:
 						block >> body) ^ newForStatement([dl], e, body, null, null)
+						
+	#external_parser_call[rule] = $(callExternalParser(rule, parser, input))
+						
+	def callExternalParser(id, parser, input as OMetaInput):
+		for r in compilerParameters.References:
+			assemblyRef = r as Boo.Lang.Compiler.TypeSystem.Reflection.IAssemblyReference
+			continue if assemblyRef is null
+			
+			assembly = assemblyRef.Assembly
+			type = assembly.GetType(parser)
+			break if type is not null
+			
+		return FailedMatch(input, RuleFailure("callExternalParser", PredicateFailure(parser))) if type is null
+		
+		#Save indent and wsa parameters (wsaLevel, indentStack, indentLevel)
+		wsaLevel = input.GetMemo("wsaLevel")
+		indentStack = input.GetMemo("indentStack")
+		indentLevel = input.GetMemo("indentLevel")
+		
+		externalParser = Activator.CreateInstance(type)
+		result = type.InvokeMember(id, BindingFlags.InvokeMethod, null as Binder, externalParser, (input,))
+		
+		//Restore indent and wsa parameters (wsaLevel, indentStack, indentLevel) after executing of external parser
+		sm = result as SuccessfulMatch
+		if sm is not null:
+			sm.Input.SetMemo("wsaLevel", wsaLevel)
+			sm.Input.SetMemo("indentStack", indentStack)
+			sm.Input.SetMemo("indentLevel", indentLevel)
+			return sm
+			
+		return result
