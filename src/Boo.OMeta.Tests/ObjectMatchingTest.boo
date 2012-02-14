@@ -74,4 +74,21 @@ class ObjectMatchingTest:
 			case e = SuccessfulMatch(Value, Input):
 				assert Value = "John"
 				assert Input.IsEmpty
+	
+	ometa EmployeeClassMatching4:
+		startFromJ = "J"
+		firstNameStartsFromJ = Employee(FirstName: startFromJ)
 
+	[Test]
+	def ObjectMatchingReturnsSameObject():
+		obj = Employee("John", "Lennon")
+		match EmployeeClassMatching4().firstNameStartsFromJ(OMetaInput.Singleton(obj)):
+			case e = SuccessfulMatch(Value):
+				assert Value is obj
+	[Test]
+	def ObjectMatchingIsolatesInput():
+		obj = Employee("John", "Lennon")
+		match EmployeeClassMatching4().firstNameStartsFromJ(OMetaInput.Singleton(obj)):
+			case e = SuccessfulMatch(Input):
+				assert Input.IsEmpty
+		

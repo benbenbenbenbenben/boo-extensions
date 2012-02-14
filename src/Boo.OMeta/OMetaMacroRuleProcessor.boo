@@ -269,6 +269,8 @@ class OMetaMacroRuleProcessor:
 								$(expandObjectPatternRules(rules, lastMatch))
 							else:
 								$lastMatch = FailedMatch($input, ObjectPatternFailure($(e.ToCodeString())))
+							if $lastMatch isa SuccessfulMatch:
+								$lastMatch = SuccessfulMatch($input.Tail, $input.Head)
 				|].Body
 				block.Add(code) 
 				
