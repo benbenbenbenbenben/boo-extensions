@@ -27,7 +27,7 @@ ometa ExternalParser:
 	#converting to AST
 	exp = const|infix
 	const = Const(value) ^ IntegerLiteralExpression(Value: value)
-	infix = Infix(operator, left:exp >> l, right:exp >> r) ^ newInfixExpression(Token("operator", operator), l, r)	
+	infix = Infix(operator, left:exp >> l, right:exp >> r) ^ newInfixExpression(Token("operator", operator), l, r)
 	
 	def newMacroStatement(data):
 		m = MacroStatement("testMacro")
@@ -117,28 +117,31 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-		code = """for n in zip(names, attributes):
-	print("mmm")"""
-		code1 = """print("mmm")"""
-
-		//a1 = [| Operator:binary_operator >> op |]
-		
+		code = """a = (1, b=2, 3)
+lock spam=foo(), eggs=bar():
+	pass
+c = 1 in (1, 2, 3)
+print(d=1, 2)
+print(1 in (1, 2, 3))
+"""
+	
 //		booParser = BooParser()
-//		m =  booParser.module(code2)
+//		m =  booParser.module(code)
 //		bp = BooParser()
 //		match bp.stmt(code):
 //			case SuccessfulMatch(Value: s)
 //		print s
-		
 		parser = TinyAstParser()
 		match parser.block(code):
 			case SuccessfulMatch(Value: o = Boo.TinyAst.Block())
 		
 		print o
-		
-		evaluator = TinyAstEvaluator()
-		b = evaluator.invocation(OMetaInput.Singleton(o.Forms[0]))
-		b = evaluator.stmt_for(OMetaInput.Singleton(o.Forms[0]))
+
+		cp = Boo.Lang.Compiler.CompilerParameters()
+		cp.References.Add(typeof(BooParser).Assembly)		
+		evaluator = TinyAstEvaluator(cp)
+		#b = evaluator.invocation(OMetaInput.Singleton(o.Forms[0]))
+		b = evaluator.block(OMetaInput.Singleton(o))
 		
 		print b
 		
@@ -212,9 +215,6 @@ import Boo.OMeta
 import Boo.OMeta.Parser
 import Boo.Lang.Compiler.Ast
 
-ometa AClassMatching:
-	one = "12"
-	two = "23"
-	example1 = A(first: _ >> f and (f isa string), first: one, second: two)
-	//example1 = A(first: _ >> f, second: two >> s)
+ometa EmployeeClassMatching4:
+	stmt_macro = Prefix(Operator: Identifier(Name: _ >> name), Operand: optional_assignment_list >> args ) ^ newMacro(makeToken(name), args, null, null)
 """
