@@ -157,7 +157,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	qualified_name = (ID >> qualifier, --((DOT, id >> n) ^ n) >> suffix)^ buildQName(qualifier, suffix) 
 	
-	module_member = assembly_attribute | type_def | method | (~(~~(ID, AS), stmt_declaration), ~stmt_expression, ~stmt_goto, stmt_macro)
+	module_member = assembly_attribute | type_def | method | (~stmt_declaration, ~stmt_expression, ~stmt_goto, stmt_macro)
 	
 	type_def = class_def | struct_def | interface_def | enum_def | callable_def
 	
@@ -359,7 +359,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	stmt = stmt_block | stmt_line | external_parser_call
 	
-	stmt_line = (~~(ID, AS), stmt_declaration) \
+	stmt_line = stmt_declaration \
 		| stmt_expression \
 		| stmt_goto \
 		| stmt_macro \
@@ -403,7 +403,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	stmt_modifier_type = (IF ^ StatementModifierType.If) | (UNLESS ^ StatementModifierType.Unless)
 	
-	stmt_declaration = (declaration >> d,
+	stmt_declaration = (~~(ID, AS), declaration >> d,
 			(ASSIGN, block_expression >> e)
 			| ((ASSIGN, rvalue >> e), eol)
 			| eol
