@@ -17,7 +17,7 @@ class OMetaInput:
 			return EnumeratorInput(enumerator, position, prev)
 		return EndOfEnumeratorInput(position, prev)
 		
-	static def Prepend(argument, input as OMetaInput, prev as OMetaInput):
+	static def Prepend(argument, input as OMetaInput, prev as OMetaInput) as OMetaInput:
 		return OMetaInputCons(argument, input, prev)
 		
 	static def Singleton(o):
