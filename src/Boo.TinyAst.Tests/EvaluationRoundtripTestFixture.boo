@@ -45,6 +45,8 @@ class EvaluationRoundtripTestFixture:
 		compiler.Parameters.References.Add(typeof(TinyAstParser).Assembly)		
 		compiler.Parameters.References.Add(GetType().Assembly)
 		
+		compiler.Parameters.References.Remove(typeof(LockMacro).Assembly) #preventing expansion of built-in macros
+		
 		p = Boo.Lang.Compiler.Pipelines.ExpandMacros()		
 		p.Add(RunAssembly())		
 		p.Replace(typeof(Parsing), Boo.TinyAst.TinyAstParserStep())
@@ -87,8 +89,9 @@ class EvaluationRoundtripTestFixture:
 //	
 //	to:
 //		
-//	for (n, a) in zip(names, attributes):
-//		print("\${n} \${a}!")		
+//	for a in zip(names, attributes):
+//		print("${n} ${a}!")
+
 		runTestCase("arrays-1.boo")	
 
 	[Test]
@@ -111,6 +114,12 @@ class EvaluationRoundtripTestFixture:
 // to:
 //
 // a = (1, b=2, 3)
+//
+// Because compiler pipeline includes MacroExpander changing
+// from:
+// lock spam = foo(), eggs = bar()  
+// to:
+// lock((spam = foo()), (eggs = bar()))
 		runTestCase("arrays-3.boo")
 
 	[Test]
