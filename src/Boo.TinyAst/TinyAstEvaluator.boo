@@ -43,7 +43,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		assign = "="
 
 	stmt = stmt_block | stmt_line
-	stmt_line = stmt_expression | stmt_macro
+	stmt_line = stmt_declaration | stmt_expression | stmt_macro
 	
 	stmt_expression = assignment
 	stmt_block = stmt_for
@@ -52,6 +52,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	atom = reference | array_literal | boolean | literal
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
+	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
 	
 	string_interpolation = Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si
 	
@@ -81,7 +82,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	#declaration = ( ( Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: Identifier(Name: _ >> typeRef)) ) | Identifier(Name: _ >> name) ) ^ newDeclaration(Token(name, name), typeRef)
 	
-	declaration = Identifier(Name: _ >> name)  ^ newDeclaration(Token(name, name), null)		
+	stmt_declaration = (Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)) >> d ^ newDeclarationStatement(d, null)
+	
+	declaration = Identifier(Name: _ >> name) ^ newDeclaration(name, null)		
 	
 	invocation = invocation_expression
 	invocation_expression = Prefix(Operator: 
@@ -110,6 +113,15 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: optional_assignment_list >> args ) ^ [name, args]
 	
 	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | ~_
+	
+	type_reference = type_reference_simple | type_reference_array 
+	
+	type_reference_simple = Identifier(Name: _ >> name) ^ SimpleTypeReference(Name: name)
+	
+	type_reference_array = Brackets(Kind: BracketType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
+	
+	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank) 
+	
 	
 	def getStatement(s):
 		return s if s isa Statement		
