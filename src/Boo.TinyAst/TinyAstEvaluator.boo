@@ -41,6 +41,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		FOR = "for"
 		IN = "in"
 		assign = "="
+		OF = "of"
 
 	stmt = stmt_block | stmt_line
 	stmt_line = stmt_declaration | stmt_expression | stmt_macro
@@ -60,9 +61,14 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	array_literal = array_literal_multi
 	
-	array_literal_multi = Brackets(Kind: BracketType.Parenthesis, Form: Tuple(Forms: array_literal_multi_items >> tl)) ^ newArrayLiteral(null, tl)
+	array_literal_multi = Brackets(Kind: BracketType.Parenthesis, 
+									Form: (
+										Tuple(Forms: array_literal_multi_items >> tl) | 
+										Pair(Left: array_literal_type >> type, Right: Tuple(Forms: array_literal_multi_items >> tl))
+									)
+							) ^ newArrayLiteral(type, tl)
 	
-	forArray[ruleName] = $(Apply(ruleName, (input.Head as Array)))
+	array_literal_type = Prefix(Operator: OF, Operand: type_reference >> type) ^ ArrayTypeReference(ElementType: type, Rank: null)
 	
 	array_literal_multi_items = (++assignment >> a, ~_) ^ a
 
