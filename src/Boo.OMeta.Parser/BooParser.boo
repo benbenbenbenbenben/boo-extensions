@@ -409,7 +409,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 			| eol
 		) ^ newDeclarationStatement(d, e)
 	
-	declaration = (ID >> name, optional_type >> typeRef) ^ newDeclaration(name, typeRef)
+	declaration = (ID >> name, optional_type >> typeRef) ^ newDeclaration(tokenValue(name), typeRef)
 
 	stmt_block = stmt_if | stmt_unless | stmt_for | stmt_while
 

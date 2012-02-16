@@ -39,7 +39,7 @@ def newWhileStatement(condition, body, orBlock, thenBlock):
 	return node
 
 def newDeclaration(name, type as TypeReference):
-	return Declaration(Name: tokenValue(name), Type: type)
+	return Declaration(Name: name, Type: type)
 
 def newDeclarationStatement(d as Declaration,  initializer as Expression):
 	return DeclarationStatement(Declaration: d, Initializer: initializer)
