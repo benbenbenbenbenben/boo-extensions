@@ -49,6 +49,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		IS_NOT = "is not"
 		plus = "+"
 		minus = "-"
+		star = "*"
+		division = "/"
+		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 
 	stmt = stmt_block | stmt_line
 	stmt_line = stmt_declaration | stmt_expression | stmt_macro
@@ -93,7 +96,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	parenthesized_expression = Brackets(Kind: BracketType.Parenthesis, Form: assignment >> e) ^ e
 	
 	#binary_operator = ( Identifier(Name: "or") ^ Token("or", "or")) | ( Identifier(Name: "and") ^ Token("and","and"))
-	binary_operator = OR | AND | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS
+	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR | DIVISION
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
 	
@@ -113,7 +116,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	declaration = Identifier(Name: _ >> name) ^ newDeclaration(name, null)		
 	
 	prefix = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
-	prefix_operator = NOT
+	prefix_operator = NOT | MINUS
 	
 	invocation = invocation_expression
 	invocation_expression = Prefix(Operator: 
