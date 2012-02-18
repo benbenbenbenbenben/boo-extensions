@@ -40,17 +40,24 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		AS = "as"
 		FOR = "for"
 		IN = "in"
+		NOT_IN = "not in"
 		assign = "="
 		OF = "of"
+		IF = "if"
+		NOT = "not"
+		IS = "is"
+		IS_NOT = "is not"
+		plus = "+"
+		minus = "-"
 
 	stmt = stmt_block | stmt_line
 	stmt_line = stmt_declaration | stmt_expression | stmt_macro
 	
 	stmt_expression = assignment
-	stmt_block = stmt_for
+	stmt_block = stmt_if | stmt_for
 	
 	#expression = binary_expression | invocation | atom
-	atom = reference | array_literal | boolean | literal
+	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
 	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
@@ -72,25 +79,41 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	array_literal_multi_items = (++assignment >> a, ~_) ^ a
 
+	list_literal = Brackets(Kind: BracketType.Square,
+								Form: (
+									Tuple(Forms: ((++assignment >> a, ~_) ^ a) >> items)
+								)
+							) ^ newListLiteral(items)
+
 	boolean = true_literal | false_literal
 	
 	true_literal = TRUE ^ [| true |]
 	false_literal = FALSE ^ [| false |]
 	
+	parenthesized_expression = Brackets(Kind: BracketType.Parenthesis, Form: assignment >> e) ^ e
+	
 	#binary_operator = ( Identifier(Name: "or") ^ Token("or", "or")) | ( Identifier(Name: "and") ^ Token("and","and"))
-	binary_operator = OR | AND | ASSIGN | IN
+	binary_operator = OR | AND | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
 	
 	reference = Identifier() >> r ^ ReferenceExpression(Name: (r as Identifier).Name)
 	
-	assignment = binary_expression | invocation | atom
+	assignment = binary_expression | try_cast | prefix | invocation | atom
+
+	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 
 	#declaration = ( ( Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: Identifier(Name: _ >> typeRef)) ) | Identifier(Name: _ >> name) ) ^ newDeclaration(Token(name, name), typeRef)
 	
-	stmt_declaration = (Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)) >> d ^ newDeclarationStatement(d, null)
+	stmt_declaration = (typed_declaration >> d
+						| Infix(Operator: ASSIGN, Left: typed_declaration >> d, Right: assignment >> e)) ^ newDeclarationStatement(d, e)
+	
+	typed_declaration = Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)
 	
 	declaration = Identifier(Name: _ >> name) ^ newDeclaration(name, null)		
+	
+	prefix = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
+	prefix_operator = NOT
 	
 	invocation = invocation_expression
 	invocation_expression = Prefix(Operator: 
@@ -106,7 +129,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	block = empty_block | (Block(Forms: (++(stmt >> s ^ getStatement(s)) >> a, ~_) ) ^ newBlock(null, null, a, null))
 	
 	empty_block = Block(Forms: (Identifier(Name: "pass"), ~_)) ^ AST.Block()
-
 	
 	
 	stmt_for = Pair(Left:
@@ -114,6 +136,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					Right:
 						block >> body) ^ newForStatement([dl], e, body, null, null)
 						
+	stmt_if = Pair(Left:
+						Prefix(Operator: IF, Operand: assignment >> e),
+					Right: 
+						block >> trueBlock) ^ newIfStatement(e, trueBlock, null)
+	
 	stmt_macro = (stmt_macro_head >> head | Pair(Left: stmt_macro_head >> head, Right: block >> b) ) ^ newMacro(makeToken((head as List)[0]), (head as List)[1], b, null)
 	
 	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: optional_assignment_list >> args ) ^ [name, args]
