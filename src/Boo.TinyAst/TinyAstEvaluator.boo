@@ -52,15 +52,31 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		star = "*"
 		division = "/"
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
+		ENUM = "enum"
+		PASS = "pass"
 
 	stmt = stmt_block | stmt_line
+	
+	module_member = type_def
+
+	type_def = enum_def
+	
+	enum_def = Pair(Left: Prefix(Operator:ENUM, Operand: id >> r), 
+					Right: enum_body >> body
+					) ^ newEnum(null, null, r, body)
+	
+	enum_body = (empty_block ^ null) | (Block(Forms: (++enum_field >> fields) ) ^ fields)
+	
+	enum_field = Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name ^ newEnumField(null, name, e)
+	
+	id = Identifier(Name: _ >> name) ^ name
+	
 	stmt_line = stmt_declaration | stmt_expression | stmt_macro
 	
 	stmt_expression = assignment
 	stmt_block = stmt_if | stmt_for
 	
-	#expression = binary_expression | invocation | atom
-	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression
+	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
 	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
@@ -95,25 +111,22 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	parenthesized_expression = Brackets(Kind: BracketType.Parenthesis, Form: assignment >> e) ^ e
 	
-	#binary_operator = ( Identifier(Name: "or") ^ Token("or", "or")) | ( Identifier(Name: "and") ^ Token("and","and"))
 	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR | DIVISION
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
 	
-	reference = Identifier() >> r ^ ReferenceExpression(Name: (r as Identifier).Name)
+	reference = id >> r ^ ReferenceExpression(Name: r)
 	
 	assignment = binary_expression | try_cast | prefix | invocation | atom
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 
-	#declaration = ( ( Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: Identifier(Name: _ >> typeRef)) ) | Identifier(Name: _ >> name) ) ^ newDeclaration(Token(name, name), typeRef)
-	
 	stmt_declaration = (typed_declaration >> d
 						| Infix(Operator: ASSIGN, Left: typed_declaration >> d, Right: assignment >> e)) ^ newDeclarationStatement(d, e)
 	
 	typed_declaration = Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)
 	
-	declaration = Identifier(Name: _ >> name) ^ newDeclaration(name, null)		
+	declaration = id >> name ^ newDeclaration(name, null)		
 	
 	prefix = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
 	prefix_operator = NOT | MINUS
@@ -131,7 +144,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	block = empty_block | (Block(Forms: (++(stmt >> s ^ getStatement(s)) >> a, ~_) ) ^ newBlock(null, null, a, null))
 	
-	empty_block = Block(Forms: (Identifier(Name: "pass"), ~_)) ^ AST.Block()
+	empty_block = Block(Forms: (PASS, ~_)) ^ AST.Block()
 	
 	
 	stmt_for = Pair(Left:
@@ -157,6 +170,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	type_reference_array = Brackets(Kind: BracketType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
 	
 	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank) 
+	
+	quasi_quote = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (module_member >> e, ~_))) ^ newQuasiquoteExpression(e)
 	
 	
 	def getStatement(s):
