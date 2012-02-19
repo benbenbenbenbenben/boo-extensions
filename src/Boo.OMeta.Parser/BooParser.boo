@@ -186,11 +186,11 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		attributes >> attrs, 
 		member_modifiers >> mod,
 		ENUM, ID >> name, begin_block, enum_body >> body, end_block
-	) ^ newEnum(attrs, mod, name, body)
+	) ^ newEnum(attrs, mod, tokenValue(name), body)
 	
 	enum_body = (++enum_field >> fields ^ fields) | (PASS, eol ^ null)
 	
-	enum_field = (attributes >> attrs, ID >> name, ((ASSIGN, expression >> e) | ""), eol) ^ newEnumField(attrs, name, e)
+	enum_field = (attributes >> attrs, ID >> name, ((ASSIGN, expression >> e) | ""), eol) ^ newEnumField(attrs, tokenValue(name), e)
 	
 	super_types = ((LPAREN, optional_type_reference_list >> types, RPAREN) ^ types) | ""
 	

@@ -220,7 +220,7 @@ def newParameterDeclaration(attributes, name, type):
 	return setUpAttributes(node, attributes)
 	
 def newEnum(attributes, modifiers, name, members):
-	return setUpType(EnumDefinition(Name: tokenValue(name)), attributes, modifiers, null, null, members)
+	return setUpType(EnumDefinition(Name: name), attributes, modifiers, null, null, members)
 	
 def newCallableTypeReference(params, paramArray, type):
 	node = CallableTypeReference(ReturnType: type)
@@ -257,7 +257,7 @@ def newEnumField(attributes, name, initializer):
 			initializer = e
 		otherwise:
 			pass
-	return setUpMember(EnumMember(Name: tokenValue(name), Initializer: initializer), attributes, null)
+	return setUpMember(EnumMember(Name: name, Initializer: initializer), attributes, null)
 	
 def newClass(attributes, modifiers, name, genericParameters, baseTypes, members):
 	return setUpType(ClassDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
