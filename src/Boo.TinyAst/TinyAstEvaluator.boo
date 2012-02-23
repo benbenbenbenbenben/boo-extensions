@@ -71,6 +71,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		EVENT = "event"
 		GET = "get"
 		SET = "set"
+		RETURN = "return"
 
 	stmt = type_member_stmt | stmt_block | stmt_line
 	
@@ -309,11 +310,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					Right: 
 						block >> trueBlock) ^ newIfStatement(e, trueBlock, null)
 	
-	stmt_macro = (stmt_macro_head >> head | Pair(Left: stmt_macro_head >> head, Right: block >> b) ) ^ newMacro(makeToken((head as List)[0]), (head as List)[1], b, null)
+	stmt_macro = (stmt_macro_head >> head | Pair(Left: stmt_macro_head >> head, Right: block >> b) ) ^ newMacro((head as List)[0], (head as List)[1], b, null)
 	
-	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: optional_assignment_list >> args ) ^ [name, args]
+	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
 	
-	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ~_
+	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ""
 	
 	type_reference = type_reference_simple | type_reference_array
 	
@@ -323,13 +324,20 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank)
 	
-	quasi_quote = quasi_quote_module | quasi_quote_member | quasi_quote_expression
+	quasi_quote = quasi_quote_module | quasi_quote_member | quasi_quote_expression | quasi_quote_stmt
 	
 	quasi_quote_module = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (module_member >> e, ~_))) ^ newQuasiquoteExpression(e)
 	
 	quasi_quote_member = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (class_member >> e, ~_))) ^ newQuasiquoteExpression(e)
 	
 	quasi_quote_expression = Brackets(Kind: BracketType.QQ, Form: assignment >> e) ^ newQuasiquoteExpression(e)
+	
+	quasi_quote_stmt = Brackets(Kind: BracketType.QQ, Form: (qq_return | qq_macro) >> e) ^ newQuasiquoteExpression(e)
+	
+	qq_return = (RETURN | Prefix(Operator: RETURN, Operand: assignment >> e)) ^ ReturnStatement(Expression: e, Modifier: null)
+	qq_macro = prefix[id] >> name, optional_assignment_list >> args ^ newMacro(name, args, null, null) 
+//	qq_return = (RETURN, optional_assignment >> e, optional_stmt_modifier_node >> m) ^ ReturnStatement(Expression: e, Modifier: m)	
+//	qq_macro = (ID >> name, assignment_list >> args, optional_stmt_modifier_node >> m) ^ newMacro(name, args, null, m)
 	
 	def getStatement(s):
 		return s if s isa Statement		
