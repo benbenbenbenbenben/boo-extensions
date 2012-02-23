@@ -167,7 +167,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		attributes >> attrs,
 		member_modifiers >> mod,
 		CLASS, ID >> className, optional_generic_parameters >> genericParameters, super_types >> superTypes, begin_block, class_body >> body, end_block
-	) ^ newClass(attrs, mod, className, genericParameters, superTypes, body)
+	) ^ newClass(attrs, mod, tokenValue(className), genericParameters, superTypes, body)
 
 	struct_def = (
 		attributes >> attrs,
@@ -212,7 +212,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		attributes >> attrs,
 		member_modifiers >> mod,
 		EVENT, ID >> name, optional_type >> type, eol
-	) ^ newEvent(attrs, mod, name, type)
+	) ^ newEvent(attrs, mod, tokenValue(name), type)
 	
 	property_def = (
 		attributes >> attrs,
@@ -226,7 +226,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 			| (property_getter >> pg)
 		),
 		end_block
-	) ^ newProperty(attrs, mod, name, parameters, type, pg, ps)
+	) ^ newProperty(attrs, mod, tokenValue(name), parameters, type, pg, ps)
 	
 	method_signature = (
 		attributes >> attrs,
@@ -235,7 +235,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		optional_generic_parameters >> genericParameters,
 		method_parameters >> parameters,
 		attributes >> returnTypeAttributes, optional_type >> type, eol
-	) ^ newGenericMethod(attrs, mod, name, genericParameters, parameters, returnTypeAttributes, type, null)	
+	) ^ newGenericMethod(attrs, mod, tokenValue(name), genericParameters, parameters, returnTypeAttributes, type, null)	
 	
 	property_parameters = ((LBRACK, parameter_list >> parameters, RBRACK) | "") ^ parameters
 	
@@ -248,13 +248,13 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		member_modifiers >> mod, 
 		(ID >> name and (tokenValue(name) == key)),
 		block >> body
-	) ^ newMethod(attrs, mod, name, [[],null], null, null, body)
+	) ^ newMethod(attrs, mod, tokenValue(name), [[],null], null, null, body)
 	
 	field = (
 		attributes >> attrs,
 		member_modifiers >> mod,
 		ID >> name, optional_type >> type, field_initializer >> initializer
-	) ^ newField(attrs, mod, name, type, initializer)
+	) ^ newField(attrs, mod, tokenValue(name), type, initializer)
 
 	field_initializer = (ASSIGN, block_expression) | ((ASSIGN, rvalue >> v, eol) ^ v) | eol
 	
@@ -280,7 +280,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		method_parameters >> parameters,
 		attributes >> returnTypeAttributes, optional_type >> type,
 		block >> body
-	) ^ newGenericMethod(attrs, mod, name, genericParameters, parameters, returnTypeAttributes, type, body)
+	) ^ newGenericMethod(attrs, mod, tokenValue(name), genericParameters, parameters, returnTypeAttributes, type, body)
 
 
 	constructor_method = (

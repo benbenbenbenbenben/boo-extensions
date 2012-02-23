@@ -137,13 +137,13 @@ def newFloat(t):
 	return DoubleLiteralExpression(Value: value)
 
 def newEvent(attributes, modifiers, name, type):
-	return setUpMember(Event(Name: tokenValue(name), Type: type), attributes, modifiers)
+	return setUpMember(Event(Name: name, Type: type), attributes, modifiers)
 	
 def newField(attributes, modifiers, name, type, initializer):
-	return setUpMember(Field(Name: tokenValue(name), Type: type, Initializer: initializer), attributes, modifiers)
+	return setUpMember(Field(Name: name, Type: type, Initializer: initializer), attributes, modifiers)
 	
 def newProperty(attributes, modifiers, name, parameters, type, getter, setter):
-	node = Property(Name: tokenValue(name), Type: type, Getter: getter, Setter: setter)
+	node = Property(Name: name, Type: type, Getter: getter, Setter: setter)
 	setUpParameters node, parameters
 	return setUpMember(node, attributes, modifiers)
 	
@@ -161,7 +161,7 @@ def setUpParameters(node as INodeWithParameters, parameters):
 	for p in flatten(parameters): node.Parameters.Add(p)
 	
 def newMethod(attributes, modifiers, name, parameters as List, returnTypeAttributes, returnType as TypeReference, body as Block) as Method:
-	node = Method(Name: tokenValue(name), Body: body, ReturnType: returnType)
+	node = Method(Name: name, Body: body, ReturnType: returnType)
 
 	if parameters[1] != null: //Check if ParamArray is present
 		setUpParameters node, parameters
@@ -260,7 +260,7 @@ def newEnumField(attributes, name, initializer):
 	return setUpMember(EnumMember(Name: name, Initializer: initializer), attributes, null)
 	
 def newClass(attributes, modifiers, name, genericParameters, baseTypes, members):
-	return setUpType(ClassDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
+	return setUpType(ClassDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 def newStruct(attributes, modifiers, name, genericParameters, baseTypes, members):
 	return setUpType(StructDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
@@ -473,7 +473,8 @@ def isCharInput(input as OMetaInput):
 	
 	
 def prepend(first, tail as List):
-	if first is null: return tail
+	return tail if first is null
+	return (first as List) + tail if first isa List
 	return [first] + tail
 	
 def buildQName(q, rest):
