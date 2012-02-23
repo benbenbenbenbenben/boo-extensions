@@ -142,10 +142,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 //		end_block
 //	) ^ newProperty(attrs, mod, name, parameters, type, pg, ps)
 
-	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, mmm,\
+	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, \
 						(id |prefix[id])  >> name, next[i] ^ newProperty([att, in_att], mod, name, null, null, (gs as List)[0], (gs as List)[1]) /*TODO*/
-						
-	mmm = ~~_						
 						
 	property_body = Pair(Left: _ >> newInput, Right: get_set >> gs), $(success(newInput, gs)) 
 	
@@ -171,9 +169,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
 	
-	def mmm(o):
-		return o
-
 	inline_attributes = inline_attributes_prescan | ("" ^ [])
 							
 	inline_attributes_prescan = (Prefix(Operator: attributes_group >> l, Operand: (inline_attributes_prescan >> r, _ >> newInput)), $(success(newInput, prepend(l, r))) )\
@@ -278,7 +273,16 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	prefix_operator = NOT | MINUS
 	
 	invocation = invocation_expression
-	invocation_expression = Prefix(Operator: reference >> target, Operand: invocation_arguments >> args) ^ newInvocation(target, args, null)
+	invocation_expression = here >> i, member_reference >> mr, Prefix(Operator: reference >> target, Operand: invocation_arguments >> args) \
+								, next[i] ^ newInvocation(getTarget(mr, target), args, null)
+	
+	def getTarget(l, r):
+		return r if l is null
+		return newMemberReference(l, (r as ReferenceExpression).Name)
+	
+	member_reference = (Infix(Operator: DOT, Left: member_reference_prescan >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
+	
+	member_reference_prescan = Infix(Operator: DOT, Left: member_reference_prescan >> e, Right: id >> name) ^ newMemberReference(e, name) | reference
 	
 	invocation_arguments = Brackets(
 								Kind: BracketType.Parenthesis,
