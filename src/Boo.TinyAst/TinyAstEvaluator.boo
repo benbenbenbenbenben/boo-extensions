@@ -54,14 +54,41 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		ENUM = "enum"
 		PASS = "pass"
+		DEF = "def"
+		CLASS = "class"
+		DOT = "."		
+		PRIVATE = "private"
+		PUBLIC = "public"
+		INTERNAL = "internal"
+		PROTECTED = "protected"
+		FINAL = "final"
+		STATIC = "static"
+		VIRTUAL = "virtual"
+		OVERRIDE = "override"
+		TRANSIENT = "transient"
+		ABSTRACT = "abstract"
+		NEW = "new"
+		EVENT = "event"
+		GET = "get"
+		SET = "set"
 
-	stmt = stmt_block | stmt_line
+	stmt = type_member_stmt | stmt_block | stmt_line
 	
-	module_member = type_def
+	module_member = type_def | method
+	type_member_stmt = (type_def | method) >> tm ^ TypeMemberStatement(TypeMember: tm)
 
-	type_def = enum_def
+	type_def = class_def | enum_def
 	
-	enum_def = Pair(Left: Prefix(Operator:ENUM, Operand: id >> r), 
+	class_def = Pair(Left: Prefix(Operator: CLASS, Operand: id >> className),
+						Right: class_body >> body) ^ newClass(null, null, className, null, null, body)
+	
+	class_body = Block(Forms: ( (empty_block ^ null) | (++class_member) >> b, nothing ) ) ^ b
+	
+	nothing = ~_
+	
+	class_member = type_def | method  | field | event_def | property_def
+	
+	enum_def = Pair(Left: Prefix(Operator: ENUM, Operand: id >> r), 
 					Right: enum_body >> body
 					) ^ newEnum(null, null, r, body)
 	
@@ -69,7 +96,126 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	enum_field = Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name ^ newEnumField(null, name, e)
 	
+//	method = (
+//		attributes >> attrs,
+//		member_modifiers >> mod,
+//		DEF, ID >> name,
+//		optional_generic_parameters >> genericParameters,
+//		method_parameters >> parameters,
+//		attributes >> returnTypeAttributes, optional_type >> type,
+//		block >> body
+//	) ^ newGenericMethod(attrs, mod, name, genericParameters, parameters, returnTypeAttributes, type, body)	
+	
+	method = (--attributes_line >> att, here >> i, method_body >> body, inline_attributes >> in_att, member_modifiers >> mod, \
+				prefix[DEF], prefix[id] >> name), next[i] ^ newGenericMethod([att, in_att], mod, name, null, [null, null], null, null, body)
+	
+	here = $(success(input, input))
+	next[i] = $(success((i as OMetaInput).Tail, (i as OMetaInput).Tail))
+	
+	method_body = Pair(	Left: _ >> newInput, Right: block >> body), $(success(newInput, body))
+	
+//	field = (
+//		attributes >> attrs,
+//		member_modifiers >> mod,
+//		ID >> name, optional_type >> type, field_initializer >> initializer
+//	) ^ newField(attrs, mod, name, type, initializer)
+
+	#field = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod ^ newField([att, in_att], mod, name, type, initializer)
+
+	field = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
+				, optional_type >> type, id >> name ^ newField([att, in_att], mod, name, type, initializer)
+				
+	event_def = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, optional_type >> type, prefix[EVENT], \
+					optional_type >> type, id >> name ^ newEvent([att, in_att], mod, name, type)
+
+//	property_def = (
+//		attributes >> attrs,
+//		member_modifiers >> mod,
+//		ID >> name, property_parameters >> parameters, optional_type >> type,
+//		begin_block,
+//		(
+//			(property_getter >> pg, property_setter >> ps)
+//			| (property_setter >> ps, property_getter >> pg)
+//			| (property_setter >> ps)
+//			| (property_getter >> pg)
+//		),
+//		end_block
+//	) ^ newProperty(attrs, mod, name, parameters, type, pg, ps)
+
+	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, mmm,\
+						(id |prefix[id])  >> name, next[i] ^ newProperty([att, in_att], mod, name, null, null, (gs as List)[0], (gs as List)[1]) /*TODO*/
+						
+	mmm = ~~_						
+						
+	property_body = Pair(Left: _ >> newInput, Right: get_set >> gs), $(success(newInput, gs)) 
+	
+	get_set = Block(Forms: (
+							(property_getter >> pg, property_setter >> ps, ~_)
+							| (property_setter >> ps, property_getter >> pg, ~_)
+							| (property_setter >> ps, ~_)
+							| (property_getter >> pg, ~_)
+							)
+					) ^ [pg, ps]
+	property_getter = accessor[GET]
+	property_setter = accessor[SET]
+
+//	accessor[key] = (
+//		attributes >> attrs,
+//		member_modifiers >> mod, 
+//		(ID >> name and (tokenValue(name) == key)),
+//		block >> body
+//	) ^ newMethod(attrs, mod, tokenValue(name), [[],null], null, null, body)
+
+	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: block >> body) \
+						^ newMethod([att, in_att], mod, tokenValue(name), [[],null], null, null, body)
+
+	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
+	
+	def mmm(o):
+		return o
+
+	inline_attributes = inline_attributes_prescan | ("" ^ [])
+							
+	inline_attributes_prescan = (Prefix(Operator: attributes_group >> l, Operand: (inline_attributes_prescan >> r, _ >> newInput)), $(success(newInput, prepend(l, r))) )\
+							| (Prefix(Operator: attributes_group >> l, Operand: (~inline_attributes_prescan, _ >> newInput)), $(success(newInput, l)) )
+
+	def success(input, value):
+		return SuccessfulMatch(input, value) if input isa OMetaInput
+		return SuccessfulMatch(OMetaInput.Singleton(input), value)
+
+	attributes_line =  Prefix(Operator: attributes_group >> l, Operand: attributes_line >> r) ^ prepend(l, r) | (attributes_group >> a ^ a)
+	attributes_group = Brackets(Kind:BracketType.Square, Form: attribute_list >> attrs) ^ attrs
+	
+	attribute_list = Tuple(Forms: ++attribute >> a) ^ a | (attribute >> a ^ [a])
+	
+	attribute = (Prefix(Operator: qualified_name >> name, Operand: optional_invocation_arguments >> args) | qualified_name >> name) ^ newAttribute(name, args)
+	
+	member_modifiers = member_modifiers_prescan | ("" ^ [])
+	
+	member_modifiers_prescan = (Prefix(Operator: modifier >> l, Operand: (member_modifiers_prescan >> r, _ >> newInput)), $(success(newInput, prepend(l, r))) )\
+						| (Prefix(Operator: modifier >> l, Operand: (~member_modifiers_prescan, _ >> newInput)), $(success(newInput, [l])) )
+	
+	modifier = (
+				(PRIVATE ^ TypeMemberModifiers.Private) |
+				(PUBLIC ^ TypeMemberModifiers.Public) |
+				(INTERNAL ^ TypeMemberModifiers.Internal) |
+				(PROTECTED ^ TypeMemberModifiers.Protected) | 
+				(FINAL ^ TypeMemberModifiers.Final) | 
+				(STATIC ^ TypeMemberModifiers.Static) | 
+				(VIRTUAL ^ TypeMemberModifiers.Virtual) | 
+				(OVERRIDE ^ TypeMemberModifiers.Override) | 
+				(TRANSIENT ^ TypeMemberModifiers.Transient) | 
+				(ABSTRACT ^ TypeMemberModifiers.Abstract) | 
+				(NEW ^ TypeMemberModifiers.New)
+			)
+	
+	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: assignment >> e), $(success(newInput, e)) )| ""
+	
+	optional_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference >> e), $(success(newInput, e)) )| ""
+	
 	id = Identifier(Name: _ >> name) ^ name
+	
+	qualified_name = (Infix(Operator: DOT, Left: id >> l, Right: qualified_name >> r) ^ ("$l.$r")) | id
 	
 	stmt_line = stmt_declaration | stmt_expression | stmt_macro
 	
@@ -117,7 +263,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	reference = id >> r ^ ReferenceExpression(Name: r)
 	
-	assignment = binary_expression | try_cast | prefix | invocation | atom
+	assignment = binary_expression | try_cast | prefix_expression | invocation | atom
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 
@@ -128,21 +274,23 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	declaration = id >> name ^ newDeclaration(name, null)		
 	
-	prefix = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
+	prefix_expression = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
 	prefix_operator = NOT | MINUS
 	
 	invocation = invocation_expression
-	invocation_expression = Prefix(Operator: 
-										reference >> target, 
-									Operand: 
-										Brackets(Kind: BracketType.Parenthesis, 
-												 Form: invocation_arguments >> args
-										)
-									) ^ newInvocation(target, args, null)
+	invocation_expression = Prefix(Operator: reference >> target, Operand: invocation_arguments >> args) ^ newInvocation(target, args, null)
 	
-	invocation_arguments = (Tuple(Forms: (++assignment >> a, ~_) ) ^ a) | (assignment >> b ^ [b]) | ((_ >> a and (a == null)) ^ [])
+	invocation_arguments = Brackets(
+								Kind: BracketType.Parenthesis,
+								Form: (
+										(Tuple(Forms: (++assignment >> a, ~_) ) ^ a) \
+										| (assignment >> a ^ [a]) \
+										| ((_ >> a and (a == null)) ^ [])
+								) >> args
+							) ^ args
 	
-	block = empty_block | (Block(Forms: (++(stmt >> s ^ getStatement(s)) >> a, ~_) ) ^ newBlock(null, null, a, null))
+	optional_invocation_arguments = invocation_arguments | (~~_ ^ null)
+	block = empty_block | (Block(Forms: (++(stmt >> s ^ getStatement(s)) >> a, nothing) ) ^ newBlock(null, null, a, null)) | (stmt >> s ^ newBlock(null, null, s, null))
 	
 	empty_block = Block(Forms: (PASS, ~_)) ^ AST.Block()
 	
@@ -161,18 +309,23 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: optional_assignment_list >> args ) ^ [name, args]
 	
-	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | ~_
+	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ~_
 	
-	type_reference = type_reference_simple | type_reference_array 
+	type_reference = type_reference_simple | type_reference_array
 	
-	type_reference_simple = Identifier(Name: _ >> name) ^ SimpleTypeReference(Name: name)
+	type_reference_simple = qualified_name >> name ^ SimpleTypeReference(Name: name)
 	
 	type_reference_array = Brackets(Kind: BracketType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
 	
-	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank) 
+	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank)
 	
-	quasi_quote = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (module_member >> e, ~_))) ^ newQuasiquoteExpression(e)
+	quasi_quote = quasi_quote_module | quasi_quote_member | quasi_quote_expression
 	
+	quasi_quote_module = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (module_member >> e, ~_))) ^ newQuasiquoteExpression(e)
+	
+	quasi_quote_member = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (class_member >> e, ~_))) ^ newQuasiquoteExpression(e)
+	
+	quasi_quote_expression = Brackets(Kind: BracketType.QQ, Form: assignment >> e) ^ newQuasiquoteExpression(e)
 	
 	def getStatement(s):
 		return s if s isa Statement		
