@@ -373,7 +373,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		
 	stmt_raise = (RAISE, expression >> e, stmt_modifier >> m) ^ RaiseStatement(Exception: e, Modifier: m)
 		
-	stmt_macro = (ID >> name, optional_assignment_list >> args, ((macro_block >> b) | (stmt_modifier >> m))) ^ newMacro(name, args, b, m)
+	stmt_macro = (ID >> name, optional_assignment_list >> args, ((macro_block >> b) | (stmt_modifier >> m))) ^ newMacro(tokenValue(name), args, b, m)
 	
 	stmt_yield = (YIELD, assignment >> e, stmt_modifier >> m) ^ YieldStatement(Expression: e, Modifier: m)
 	
@@ -615,7 +615,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	closure_stmt = closure_stmt_expression | closure_stmt_macro | closure_stmt_return | closure_stmt_raise | closure_stmt_unpack | closure_stmt_empty
 	
-	closure_stmt_macro = (ID >> name, assignment_list >> args, closure_stmt_modifier >> m) ^ newMacro(name, args, null, m)
+	closure_stmt_macro = (ID >> name, assignment_list >> args, closure_stmt_modifier >> m) ^ newMacro(tokenValue(name), args, null, m)
 	
 	closure_stmt_modifier = stmt_modifier_node | ~~(RBRACE | SEMICOLON)
 	
@@ -646,7 +646,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	qq_return = (RETURN, optional_assignment >> e, optional_stmt_modifier_node >> m) ^ ReturnStatement(Expression: e, Modifier: m)
 	
-	qq_macro = (ID >> name, assignment_list >> args, optional_stmt_modifier_node >> m) ^ newMacro(name, args, null, m)
+	qq_macro = (ID >> name, optional_assignment_list >> args, optional_stmt_modifier_node >> m) ^ newMacro(tokenValue(name), args, null, m)
 	
 	parenthesized_expression = (LPAREN, assignment >> e, RPAREN) ^ e
 		

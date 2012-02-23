@@ -10,11 +10,12 @@ import Boo.Lang.Compiler.Ast
 def newMacro(name, args, block, m):
 	
 	if block isa List:
-		node = MacroStatement(Name: tokenValue(name), Body: (block as List)[1], Modifier: m, Documentation: (block as List)[0])
+		node = MacroStatement(Name: name, Body: (block as List)[1], Modifier: m, Documentation: (block as List)[0])
 	else:
-		node = MacroStatement(Name: tokenValue(name), Body: block, Modifier: m)
-		
-	for arg in args: node.Arguments.Add(arg)
+		node = MacroStatement(Name: name, Body: block, Modifier: m)
+	
+	if args is not null:
+		for arg in args: node.Arguments.Add(arg)
 	return node
 
 def newSlicing(target as Expression, slices):
