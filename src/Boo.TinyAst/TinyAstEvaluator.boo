@@ -75,7 +75,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		RETURN = "return"
 		THEN = "then"
 
-	stmt = type_member_stmt | stmt_block | stmt_line
+	expansion = module_member | stmt
+
+	stmt = stmt_block | stmt_line
 	
 	module_member = type_def | method
 	type_member_stmt = (type_def | method) >> tm ^ TypeMemberStatement(TypeMember: tm)

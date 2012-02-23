@@ -10,6 +10,6 @@ import Boo.Lang.Compiler
 macro tinyAst:
 	block = __macro["tinyAst"] as Block
 	for form in block.Forms:
-		match TinyAstEvaluator(my(CompilerContext).Parameters).stmt(OMetaInput.Singleton(form)):
+		match TinyAstEvaluator(my(CompilerContext).Parameters).expansion(OMetaInput.Singleton(form)):
 			case SuccessfulMatch(Value: value):
 				yield value
