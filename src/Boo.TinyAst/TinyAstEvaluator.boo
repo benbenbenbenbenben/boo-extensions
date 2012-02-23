@@ -39,6 +39,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		FALSE = "false"
 		AS = "as"
 		FOR = "for"
+		WHILE = "while"
 		IN = "in"
 		NOT_IN = "not in"
 		assign = "="
@@ -72,6 +73,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		GET = "get"
 		SET = "set"
 		RETURN = "return"
+		THEN = "then"
 
 	stmt = type_member_stmt | stmt_block | stmt_line
 	
@@ -97,16 +99,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	enum_field = Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name ^ newEnumField(null, name, e)
 	
-//	method = (
-//		attributes >> attrs,
-//		member_modifiers >> mod,
-//		DEF, ID >> name,
-//		optional_generic_parameters >> genericParameters,
-//		method_parameters >> parameters,
-//		attributes >> returnTypeAttributes, optional_type >> type,
-//		block >> body
-//	) ^ newGenericMethod(attrs, mod, name, genericParameters, parameters, returnTypeAttributes, type, body)	
-	
 	method = (--attributes_line >> att, here >> i, method_body >> body, inline_attributes >> in_att, member_modifiers >> mod, \
 				prefix[DEF], prefix[id] >> name), next[i] ^ newGenericMethod([att, in_att], mod, name, null, [null, null], null, null, body)
 	
@@ -115,13 +107,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	method_body = Pair(	Left: _ >> newInput, Right: block >> body), $(success(newInput, body))
 	
-//	field = (
-//		attributes >> attrs,
-//		member_modifiers >> mod,
-//		ID >> name, optional_type >> type, field_initializer >> initializer
-//	) ^ newField(attrs, mod, name, type, initializer)
-
-	#field = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod ^ newField([att, in_att], mod, name, type, initializer)
 
 	field = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
 				, optional_type >> type, id >> name ^ newField([att, in_att], mod, name, type, initializer)
@@ -129,19 +114,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	event_def = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, optional_type >> type, prefix[EVENT], \
 					optional_type >> type, id >> name ^ newEvent([att, in_att], mod, name, type)
 
-//	property_def = (
-//		attributes >> attrs,
-//		member_modifiers >> mod,
-//		ID >> name, property_parameters >> parameters, optional_type >> type,
-//		begin_block,
-//		(
-//			(property_getter >> pg, property_setter >> ps)
-//			| (property_setter >> ps, property_getter >> pg)
-//			| (property_setter >> ps)
-//			| (property_getter >> pg)
-//		),
-//		end_block
-//	) ^ newProperty(attrs, mod, name, parameters, type, pg, ps)
 
 	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, \
 						(id |prefix[id])  >> name, next[i] ^ newProperty([att, in_att], mod, name, null, null, (gs as List)[0], (gs as List)[1]) /*TODO*/
@@ -158,12 +130,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	property_getter = accessor[GET]
 	property_setter = accessor[SET]
 
-//	accessor[key] = (
-//		attributes >> attrs,
-//		member_modifiers >> mod, 
-//		(ID >> name and (tokenValue(name) == key)),
-//		block >> body
-//	) ^ newMethod(attrs, mod, tokenValue(name), [[],null], null, null, body)
 
 	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: block >> body) \
 						^ newMethod([att, in_att], mod, tokenValue(name), [[],null], null, null, body)
@@ -213,10 +179,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	qualified_name = (Infix(Operator: DOT, Left: id >> l, Right: qualified_name >> r) ^ ("$l.$r")) | id
 	
-	stmt_line = stmt_declaration | stmt_expression | stmt_macro
+	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro
 	
 	stmt_expression = assignment
-	stmt_block = stmt_if | stmt_for
+	stmt_block = stmt_if | stmt_for | stmt_while
 	
 	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote
 	
@@ -270,6 +236,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	declaration = id >> name ^ newDeclaration(name, null)		
 	
+
 	prefix_expression = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
 	prefix_operator = NOT | MINUS
 	
@@ -309,10 +276,17 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 						Prefix(Operator: IF, Operand: assignment >> e),
 					Right: 
 						block >> trueBlock) ^ newIfStatement(e, trueBlock, null)
+				
+	stmt_while = Pair(Left: (prefix[WHILE], assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock ^ newWhileStatement(e, body, orBlock, thenBlock)
+	
+	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
+	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
 	
 	stmt_macro = (stmt_macro_head >> head | Pair(Left: stmt_macro_head >> head, Right: block >> b) ) ^ newMacro((head as List)[0], (head as List)[1], b, null)
 	
 	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
+	
+	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: assignment >> e)) ^ ReturnStatement(Expression: e, Modifier: null)
 	
 	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ""
 	
@@ -324,9 +298,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank)
 	
-	quasi_quote = quasi_quote_module | quasi_quote_member | quasi_quote_expression | quasi_quote_stmt
+	quasi_quote = quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
 	
-	quasi_quote_module = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (module_member >> e, ~_))) ^ newQuasiquoteExpression(e)
+	quasi_quote_module = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (--module_member >> members, --stmt >> stmts, ~_))) ^ newQuasiquoteExpression(newModule(null, null, [], members, stmts))
 	
 	quasi_quote_member = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (class_member >> e, ~_))) ^ newQuasiquoteExpression(e)
 	
