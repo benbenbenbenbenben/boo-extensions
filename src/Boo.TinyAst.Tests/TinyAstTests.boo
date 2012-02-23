@@ -117,13 +117,12 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-		code = """a = (1, b=2, 3)
-lock spam=foo(), eggs=bar():
-	pass
-c = 1 in (1, 2, 3)
-print(d=1, 2)
-print(1 in (1, 2, 3))
-"""
+		code = """literal = [|
+	protected Property:
+		get: return null
+|]"""
+
+		//code = """[four][five,six]private foo as int"""
 	
 //		booParser = BooParser()
 //		m =  booParser.module(code)
@@ -131,12 +130,13 @@ print(1 in (1, 2, 3))
 //		match bp.stmt(code):
 //			case SuccessfulMatch(Value: s)
 //		print s
+		
 		parser = TinyAstParser()
 		match parser.block(code):
-			case SuccessfulMatch(Value: o = Boo.TinyAst.Block())
+			case SuccessfulMatch(Value: o /* = Boo.TinyAst.Block()*/)
 		
 		print o
-
+		
 		cp = Boo.Lang.Compiler.CompilerParameters()
 		cp.References.Add(typeof(BooParser).Assembly)		
 		evaluator = TinyAstEvaluator(cp)
@@ -216,5 +216,7 @@ import Boo.OMeta.Parser
 import Boo.Lang.Compiler.Ast
 
 ometa EmployeeClassMatching4:
-	stmt_macro = Prefix(Operator: Identifier(Name: _ >> name), Operand: optional_assignment_list >> args ) ^ newMacro(makeToken(name), args, null, null)
+	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: block >> body) \
+						^ newMethod([att, in_att], mod, name, [[],null], null, null, body)
+
 """
