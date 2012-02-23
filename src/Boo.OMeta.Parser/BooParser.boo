@@ -514,7 +514,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 
 	cast_operator = ((cast_operator >> e, CAST, type_reference >> typeRef) ^ CastExpression(Target: e, Type: typeRef)) | member_reference
 	
-	member_reference = ((member_reference >> e, DOT, ID >> name ^ newMemberReference(e, name)) \
+	member_reference = ((member_reference >> e, DOT, ID >> name ^ newMemberReference(e, tokenValue(name))) \
 		| slicing) >> e, (INCREMENT | DECREMENT | "") >> postOp ^ addSuffixUnaryOperator(e, postOp)
 	
 	slicing = ((member_reference >> e, LBRACK, slice_list >> indices, RBRACK) ^ newSlicing(e, indices)) | invocation

@@ -319,7 +319,7 @@ def newReference(t):
 	return ReferenceExpression(Name: tokenValue(t))
 	
 def newMemberReference(target as Expression, name):
-	return MemberReferenceExpression(Target: target, Name: tokenValue(name))
+	return MemberReferenceExpression(Target: target, Name: name)
 	
 def newArrayLiteral(type, items):
 	node = newArrayLiteral(items)
