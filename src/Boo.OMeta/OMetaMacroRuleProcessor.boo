@@ -260,17 +260,21 @@ class OMetaMacroRuleProcessor:
 			case [| $_() |]:
 				rules = processObjectPatternRules(e)
 				condition = Boo.Lang.PatternMatching.Impl.PatternExpander().Expand([| smatch.Value |], e)
+				startInput = uniqueName()
 				code = [|
 					block:
+						$startInput = $input #saving start input 
 						$lastMatch = any($input)
-						smatch = $lastMatch as SuccessfulMatch
+						smatch = $lastMatch as SuccessfulMatch						
 						if smatch is not null:
 							if $condition:
 								$(expandObjectPatternRules(rules, lastMatch))
 							else:
 								$lastMatch = FailedMatch($input, ObjectPatternFailure($(e.ToCodeString())))
 							if $lastMatch isa SuccessfulMatch:
-								$lastMatch = SuccessfulMatch($input.Tail, $input.Head)
+								#overriding input of lastMatch
+								#returning object itself as Value	
+								$lastMatch = SuccessfulMatch($startInput.Tail, $startInput.Head) 
 				|].Body
 				block.Add(code) 
 				
