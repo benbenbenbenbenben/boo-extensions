@@ -31,6 +31,7 @@ class Module(Boo.Lang.Compiler.Ast.Module):
 				sb.Append(s)
 			else:
 				sb.Append((global as MacroStatement).ToCodeString())
+			sb.AppendLine()
 
 //			foreach (Boo.Lang.Compiler.Ast.Attribute attribute in m.Attributes)
 //				WriteModuleAttribute(attribute);
