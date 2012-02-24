@@ -11,7 +11,7 @@ class Foo:
 	|]
 
 
-print 'it works'
+print('it works')
 """
 class Foo:
 	node1 = [|
