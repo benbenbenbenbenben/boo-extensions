@@ -117,22 +117,25 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-		code = """literal = [|
-	protected Property:
-		get: return null
-|]"""
+		code = """class Foo:
+	node1 = [|
+		return 3
+	|]
+
+	node2 = [| return 42 |]
+"""
 
 		//code = """[four][five,six]private foo as int"""
 	
-//		booParser = BooParser()
-//		m =  booParser.module(code)
+		booParser = BooParser()
+		m =  booParser.module(code)
 //		bp = BooParser()
 //		match bp.stmt(code):
 //			case SuccessfulMatch(Value: s)
 //		print s
 		
 		parser = TinyAstParser()
-		match parser.block(code):
+		match parser.form_stmt(code):
 			case SuccessfulMatch(Value: o /* = Boo.TinyAst.Block()*/)
 		
 		print o
@@ -141,11 +144,10 @@ a0 as (int,1)
 		cp.References.Add(typeof(BooParser).Assembly)		
 		evaluator = TinyAstEvaluator(cp)
 		#b = evaluator.invocation(OMetaInput.Singleton(o.Forms[0]))
-		b = evaluator.block(OMetaInput.Singleton(o))
+		b = evaluator.expansion(OMetaInput.Singleton(o))
 		
 		print b
 		
-
 	def normalize(s as string):
 		return s.Trim().Replace("\r\n", "\n")
 		
@@ -214,6 +216,13 @@ import System
 import Boo.OMeta
 import Boo.OMeta.Parser
 import Boo.Lang.Compiler.Ast
+
+macro tinyAst:
+	block = __macro["tinyAst"] as Block
+	for form in block.Forms:
+		match TinyAstEvaluator(my(CompilerContext).Parameters).expansion(OMetaInput.Singleton(form)):
+			case SuccessfulMatch(Value: value):
+				yield value
 
 ometa EmployeeClassMatching4:
 	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: block >> body) \
