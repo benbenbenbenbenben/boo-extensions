@@ -134,7 +134,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		--EOL,
 		((namespace_declaration >> ns, eol) | ""),
 		--import_declaration >> ids,
-		((block >> b ^ [newMacroStatement(b)]) >> forms | ""),
+		(++(form_stmt >> f ^ newMacroStatement(f)) >> forms | ""),
 		--EOL
 	) ^ newModule(ns, s, ids, [], forms)
 
@@ -257,57 +257,57 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	floating_suffix = "f" | "F" | ""
 
-	def newFloat(t):
-		value = double.Parse(t)
-		return Literal(value, DoubleLiteralExpression(Value: value))
+def newFloat(t):
+	value = double.Parse(t)
+	return Literal(value, DoubleLiteralExpression(Value: value))
 
-	def newTuple(f):
-		if f isa Tuple: return f
-		return Tuple(array(Form,f as List))
+def newTuple(f):
+	if f isa Tuple: return f
+	return Tuple(array(Form,f as List))
 
-	def newTuple(t, last as Form):
-		if t isa Tuple:
-			tu = t as Tuple
-			return t if last is null
-			return Tuple(tu.Forms + (last,))
+def newTuple(t, last as Form):
+	if t isa Tuple:
+		tu = t as Tuple
+		return t if last is null
+		return Tuple(tu.Forms + (last,))
+	else:
+		return Tuple(array(Form,[t])) if last is null
+		return Tuple(array(Form,[t,last]))
+
+def newBlock(t as Form, last as Form):
+	return Block((t as Block).Forms + (last,)) if t isa Block
+	return Block((t, last))
+
+def newMacroStatement(data):
+	m = MacroStatement("tinyAst")
+	m.Annotate("tinyAst", data)
+	return m
+	
+def newBlock(forms):
+	list = []
+	for form in forms:
+		if form isa Block:
+			for item in (form as Block).Forms:
+				list.Add(item)
 		else:
-			return Tuple(array(Form,[t])) if last is null
-			return Tuple(array(Form,[t,last]))
-
-	def newBlock(t as Form, last as Form):
-		return Block((t as Block).Forms + (last,)) if t isa Block
-		return Block((t, last))
-
-	def newMacroStatement(data):
-		m = MacroStatement("tinyAst")
-		m.Annotate("tinyAst", data)
-		return m
-		
-	def newBlock(forms):
-		list = []
-		for form in forms:
-			if form isa Block:
-				for item in (form as Block).Forms:
-					list.Add(item)
-			else:
-				list.Add(form)		
-		return Block(array(Form, list))
-		
-	def newModule(ns as string, doc, imports, members, stmts):
-		m = Module(Documentation: doc)
-		
-		if ns is not null:
-			m.Namespace = NamespaceDeclaration(ns)
-		
-		for item in imports: m.Imports.Add(item)
-		for member in flatten(members):
-			if member isa Ast.Attribute:
-				m.AssemblyAttributes.Add(member)
-			elif member isa MacroStatement:
-				m.Globals.Add(member as Statement)
-			else:
-				m.Members.Add(member)
-		for stmt as Statement in flatten(stmts): m.Globals.Add(stmt)
-		return m
+			list.Add(form)		
+	return Block(array(Form, list))
+	
+def newModule(ns as string, doc, imports, members, stmts):
+	m = Module(Documentation: doc)
+	
+	if ns is not null:
+		m.Namespace = NamespaceDeclaration(ns)
+	
+	for item in imports: m.Imports.Add(item)
+	for member in flatten(members):
+		if member isa Ast.Attribute:
+			m.AssemblyAttributes.Add(member)
+		elif member isa MacroStatement:
+			m.Globals.Add(member as Statement)
+		else:
+			m.Members.Add(member)
+	for stmt as Statement in flatten(stmts): m.Globals.Add(stmt)
+	return m
 
 	
