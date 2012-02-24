@@ -76,7 +76,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		THEN = "then"
 
 	expansion = module_member | stmt
-
+	
 	stmt = stmt_block | stmt_line
 	
 	module_member = type_def | method
@@ -87,7 +87,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	class_def = Pair(Left: Prefix(Operator: CLASS, Operand: id >> className),
 						Right: class_body >> body) ^ newClass(null, null, className, null, null, body)
 	
-	class_body = Block(Forms: ( (empty_block ^ null) | (++class_member) >> b, nothing ) ) ^ b
+	class_body = Block(Forms: ( (empty_block ^ null) | ((++class_member) >> b, nothing)) ) ^ b
 	
 	nothing = ~_
 	
@@ -110,11 +110,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	method_body = Pair(	Left: _ >> newInput, Right: block >> body), $(success(newInput, body))
 	
 
-	field = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
-				, optional_type >> type, id >> name ^ newField([att, in_att], mod, name, type, initializer)
+	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
+				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
 				
-	event_def = --attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, optional_type >> type, prefix[EVENT], \
-					optional_type >> type, id >> name ^ newEvent([att, in_att], mod, name, type)
+	event_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, optional_type >> type, prefix[EVENT], \
+					optional_type >> type, id >> name, next[i] ^ newEvent([att, in_att], mod, name, type)
 
 
 	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, \
@@ -312,8 +312,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	qq_return = (RETURN | Prefix(Operator: RETURN, Operand: assignment >> e)) ^ ReturnStatement(Expression: e, Modifier: null)
 	qq_macro = prefix[id] >> name, optional_assignment_list >> args ^ newMacro(name, args, null, null) 
-//	qq_return = (RETURN, optional_assignment >> e, optional_stmt_modifier_node >> m) ^ ReturnStatement(Expression: e, Modifier: m)	
-//	qq_macro = (ID >> name, assignment_list >> args, optional_stmt_modifier_node >> m) ^ newMacro(name, args, null, m)
 	
 	def getStatement(s):
 		return s if s isa Statement		
