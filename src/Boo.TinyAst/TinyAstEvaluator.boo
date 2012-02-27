@@ -48,11 +48,19 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		NOT = "not"
 		IS = "is"
 		IS_NOT = "is not"
+		increment = "++"
+		decrement = "--"
 		plus = "+"
 		minus = "-"
 		star = "*"
 		division = "/"
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
+		bitwise_shift_left = "<<"
+		bitwise_shift_right = ">>"
+		greater_than_eq = ">="
+		greater_than = ">"
+		less_than_eq = "<="
+		less_than = "<"
 		ENUM = "enum"
 		PASS = "pass"
 		DEF = "def"
@@ -237,7 +245,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	parenthesized_expression = Brackets(Kind: BracketType.Parenthesis, Form: assignment >> e) ^ e
 	
-	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR | DIVISION
+	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR \
+					| DIVISION | BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT | GREATER_THAN_EQ | GREATER_THAN \
+					| LESS_THAN_EQ | LESS_THAN	
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
 	
@@ -256,7 +266,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 
 	prefix_expression = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
-	prefix_operator = NOT | MINUS
+	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT
+
 	
 	invocation = invocation_expression
 	invocation_expression = here >> i, member_reference_left >> mr, Prefix(Operator: (reference | invocation | atom) >> target, Operand: invocation_arguments >> args) \
