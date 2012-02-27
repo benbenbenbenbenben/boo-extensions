@@ -202,7 +202,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, high_priority_prefix
 
-	high_priority_prefix = (~atom /*not float, ex: .001*/, (STAR | DOT) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
+	high_priority_prefix = ( (STAR | (~~DOT, ~atom /*not float, ex: .001*/, DOT)) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
 
 	prefix_of_brackets = (
 							
