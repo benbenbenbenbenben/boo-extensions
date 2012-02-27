@@ -74,6 +74,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		SET = "set"
 		RETURN = "return"
 		THEN = "then"
+		SPLICE_BEGIN = "$"
 
 	expansion = module_member | stmt
 	
@@ -102,14 +103,26 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	enum_field = Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name ^ newEnumField(null, name, e)
 	
 	method = (--attributes_line >> att, here >> i, method_body >> body, inline_attributes >> in_att, member_modifiers >> mod, \
-				prefix[DEF], prefix[id] >> name), next[i] ^ newGenericMethod([att, in_att], mod, name, null, [null, null], null, null, body)
-	
+				prefix[DEF], optional_type >> type, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, null, type, body)
+				
 	here = $(success(input, input))
 	next[i] = $(success((i as OMetaInput).Tail, (i as OMetaInput).Tail))
 	
-	method_body = Pair(	Left: _ >> newInput, Right: block >> body), $(success(newInput, body))
+	method_body = Pair(	Left: _ >> newInput, Right: (block >> body)), $(success(newInput, body))
 	
+	method_parameters = Brackets(Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [null, null])) >> p) ^ p
 
+	method_parameter_list = (parameter >> p ^ [[p], null]) \
+							| (param_array >> pa ^ [null, pa]) \
+							| (Tuple(Forms: (++parameter >> p, (param_array | "") >> pa, ~_)) ^ [p, pa])
+			
+	parameter = --attributes_line >> att, inline_attributes >> in_att, optional_type >> type, id >> name ^ newParameterDeclaration([att, in_att], name, type)
+	param_array = --attributes_line >> att, inline_attributes >> in_att, optional_array_type >> type, prefix[STAR], id >> name ^ newParameterDeclaration([att, in_att], name, type)
+	
+	
+	optional_array_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference_array >> e), $(success(newInput, e)) )| ""
+	
+	
 	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
 				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
 				
@@ -129,6 +142,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							| (property_getter >> pg, ~_)
 							)
 					) ^ [pg, ps]
+					
 	property_getter = accessor[GET]
 	property_setter = accessor[SET]
 
@@ -179,17 +193,19 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	id = Identifier(Name: _ >> name) ^ name
 	
-	qualified_name = (Infix(Operator: DOT, Left: id >> l, Right: qualified_name >> r) ^ ("$l.$r")) | id
+	qualified_name = (Infix(Operator: DOT, Left: qualified_name >> l, Right: id >> r) ^ ("$l.$r")) | id
 	
 	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro
 	
-	stmt_expression = assignment
+	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression)
 	stmt_block = stmt_if | stmt_for | stmt_while
 	
-	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote
+	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote | splice_expression
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
 	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
+	
+	splice_expression = prefix[SPLICE_BEGIN], atom >> e ^ SpliceExpression(Expression: e)
 	
 	string_interpolation = Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si
 	
@@ -227,7 +243,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	reference = id >> r ^ ReferenceExpression(Name: r)
 	
-	assignment = binary_expression | try_cast | prefix_expression | invocation | atom
+	assignment = binary_expression | try_cast | prefix_expression | invocation | atom | member_reference
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 
@@ -243,16 +259,16 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	prefix_operator = NOT | MINUS
 	
 	invocation = invocation_expression
-	invocation_expression = here >> i, member_reference >> mr, Prefix(Operator: reference >> target, Operand: invocation_arguments >> args) \
+	invocation_expression = here >> i, member_reference_left >> mr, Prefix(Operator: (reference | invocation | atom) >> target, Operand: invocation_arguments >> args) \
 								, next[i] ^ newInvocation(getTarget(mr, target), args, null)
 	
 	def getTarget(l, r):
 		return r if l is null
 		return newMemberReference(l, (r as ReferenceExpression).Name)
 	
-	member_reference = (Infix(Operator: DOT, Left: member_reference_prescan >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
+	member_reference_left = (Infix(Operator: DOT, Left: member_reference >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
 	
-	member_reference_prescan = Infix(Operator: DOT, Left: member_reference_prescan >> e, Right: id >> name) ^ newMemberReference(e, name) | reference
+	member_reference = Infix(Operator: DOT, Left: member_reference >> e, Right: id >> name) ^ newMemberReference(e, name) | reference
 	
 	invocation_arguments = Brackets(
 								Kind: BracketType.Parenthesis,
@@ -292,9 +308,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ""
 	
-	type_reference = type_reference_simple | type_reference_array
+	type_reference = type_reference_simple | type_reference_array | type_reference_splice
 	
 	type_reference_simple = qualified_name >> name ^ SimpleTypeReference(Name: name)
+	
+	type_reference_splice = prefix[SPLICE_BEGIN], atom >> e ^ SpliceTypeReference(Expression: e)
 	
 	type_reference_array = Brackets(Kind: BracketType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
 	
