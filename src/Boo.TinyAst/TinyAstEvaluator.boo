@@ -131,7 +131,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 
 	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, \
-						(id |prefix[id])  >> name, next[i] ^ newProperty([att, in_att], mod, name, null, null, (gs as List)[0], (gs as List)[1]) /*TODO*/
+						optional_type >> type, (id |prefix[id])  >> name, next[i] ^ newProperty([att, in_att], mod, name, null, type, (gs as List)[0], (gs as List)[1]) /*TODO*/
 						
 	property_body = Pair(Left: _ >> newInput, Right: get_set >> gs), $(success(newInput, gs)) 
 	
