@@ -297,7 +297,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 				((parameter_list >> parameters, COMMA, param_array >> paramArray) | (param_array >> paramArray) | (optional_parameter_list >> parameters) ), \
 				RPAREN) ^ [parameters, paramArray]
 	
-	param_array = ((attributes >> attrs, STAR, ID >> name, optional_array_type >> type) ^ newParameterDeclaration(attrs, name, type))
+	param_array = ((attributes >> attrs, STAR, ID >> name, optional_array_type >> type) ^ newParameterDeclaration(attrs, tokenValue(name), type))
 	
 	optional_array_type = (AS, type_reference_array) | ""
 	
@@ -330,7 +330,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	list_of attribute
 	
-	parameter = (attributes >> attrs, ID >> name, optional_type >> type) ^ newParameterDeclaration(attrs, name, type)
+	parameter = (attributes >> attrs, ID >> name, optional_type >> type) ^ newParameterDeclaration(attrs, tokenValue(name), type)
 
 	optional_type = (AS, type_reference) | ""
 	
@@ -592,7 +592,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		RPAREN, optional_type >> type
 	) ^ newCallableTypeReference(params, paramArray, type) | ((CALLABLE)^ SimpleTypeReference("callable"))
 	
-	param_array_reference = ((STAR, type_reference >> type) ^ newParameterDeclaration(null, makeToken("arg0"), type))
+	param_array_reference = ((STAR, type_reference >> type) ^ newParameterDeclaration(null, "arg0", type))
 	
 	type_reference_array = (LPAREN, ranked_type_reference >> tr, RPAREN) ^ tr
 	

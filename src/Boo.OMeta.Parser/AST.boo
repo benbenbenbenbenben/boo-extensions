@@ -217,7 +217,7 @@ def newGenericParameterDeclaration(name, constraints):
 	return node
 	
 def newParameterDeclaration(attributes, name, type):
-	node = ParameterDeclaration(Name: tokenValue(name), Type: type)
+	node = ParameterDeclaration(Name: name, Type: type)
 	return setUpAttributes(node, attributes)
 	
 def newEnum(attributes, modifiers, name, members):
