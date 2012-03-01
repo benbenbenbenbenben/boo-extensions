@@ -117,14 +117,7 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-		code = """class Foo:
-	node1 = [|
-		return 3
-	|]
-
-	node2 = [| return 42 |]
-"""
-
+		code = """get: return null"""
 		//code = """[four][five,six]private foo as int"""
 	
 		booParser = BooParser()
@@ -136,7 +129,7 @@ a0 as (int,1)
 		
 		parser = TinyAstParser()
 		match parser.form_stmt(code):
-			case SuccessfulMatch(Value: o /* = Boo.TinyAst.Block()*/)
+			case SuccessfulMatch(Value: o, Input /* = Boo.TinyAst.Block()*/)
 		
 		print o
 		
@@ -144,7 +137,7 @@ a0 as (int,1)
 		cp.References.Add(typeof(BooParser).Assembly)		
 		evaluator = TinyAstEvaluator(cp)
 		#b = evaluator.invocation(OMetaInput.Singleton(o.Forms[0]))
-		b = evaluator.expansion(OMetaInput.Singleton(o))
+		b = evaluator.assignment(OMetaInput.Singleton(o))
 		
 		print b
 		
@@ -176,16 +169,30 @@ a0 as (int,1)
 	def GenGrammar2():
 		GenGrammarCode(macroCode2)
 		
+	[Test]
+	def GenGrammar3():
+		x = [|
+			class Class1:
+				pass	
+		
+			class Class1:
+				pass	
+		|]
+		GenGrammarCode(macroCode3)
+		
+		
 	def GenGrammarCode(code):
 		compiler = Boo.Lang.Compiler.BooCompiler()
 		compiler.Parameters.OutputWriter = StringWriter()
-		compiler.Parameters.References.Add(typeof(MacroMacro).Assembly)
+		#compiler.Parameters.References.Add(typeof(MacroMacro).Assembly)
 		compiler.Parameters.References.Add(typeof(OMetaMacroProcessor).Assembly)
 		compiler.Parameters.References.Add(typeof(Boo.TinyAst.Form).Assembly)
 		compiler.Parameters.References.Add(typeof(WhitespaceSensitiveTokenizer).Assembly)        
 		compiler.Parameters.References.Add(typeof(DataMacroExpansion).Assembly)
 		
-		compiler.Parameters.Pipeline = Boo.Lang.Compiler.Pipelines.Compile()
+		#compiler.Parameters.References.Remove(typeof(LockMacro).Assembly)
+		
+		compiler.Parameters.Pipeline = Boo.Lang.Compiler.Pipelines.ExpandMacros()
 		compiler.Parameters.Input.Add(StringInput("macro", code))
 		context = compiler.Run()
 		print context.Errors
@@ -228,4 +235,12 @@ ometa EmployeeClassMatching4:
 	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: block >> body) \
 						^ newMethod([att, in_att], mod, name, [[],null], null, null, body)
 
+"""
+
+	macroCode3 = """
+import System
+
+
+Mmm	
+	
 """
