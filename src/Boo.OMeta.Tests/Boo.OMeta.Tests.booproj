@@ -64,15 +64,6 @@
   </ItemGroup>
   <Import Project="$(BooBinPath)\Boo.Microsoft.Build.targets" />
   <ItemGroup>
-    <Reference Include="Boo.Lang">
-      <HintPath>..\..\..\boo\build\Boo.Lang.dll</HintPath>
-    </Reference>
-    <Reference Include="Boo.Lang.PatternMatching">
-      <HintPath>..\..\..\boo\build\Boo.Lang.PatternMatching.dll</HintPath>
-    </Reference>
-    <Reference Include="Boo.Lang.Useful">
-      <HintPath>..\..\..\boo\build\Boo.Lang.Useful.dll</HintPath>
-    </Reference>
     <Reference Include="nunit.framework" />
   </ItemGroup>
 </Project>
