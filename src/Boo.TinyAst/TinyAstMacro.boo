@@ -8,9 +8,9 @@ import Boo.Lang.Environments
 import Boo.Lang.Compiler
 
 macro tinyAst:
-	form = __macro["tinyAst"] as Form
-
-	match TinyAstEvaluator(my(CompilerContext).Parameters).expansion(OMetaInput.Singleton(form)):
-		case SuccessfulMatch(Value: value):
-			pass
-	yield value	
+	block = __macro["tinyAst"] as Block
+	input = OMetaInput.For(block.Forms)
+	while not input.IsEmpty:
+		match TinyAstEvaluator(my(CompilerContext).Parameters).expansion(input):
+			case SuccessfulMatch(Value: value, Input: input):
+				yield value

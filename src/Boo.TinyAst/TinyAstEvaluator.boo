@@ -57,6 +57,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		bitwise_shift_left = "<<"
 		bitwise_shift_right = ">>"
+		equality = "=="
+		inequality = "!="
 		greater_than_eq = ">="
 		greater_than = ">"
 		less_than_eq = "<="
@@ -93,43 +95,50 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	type_def = class_def | enum_def
 	
-	class_def = Pair(Left: Prefix(Operator: CLASS, Operand: id >> className),
-						Right: class_body >> body) ^ newClass(null, null, className, null, null, body)
+	class_def = --attributes_line >> att, here >> i, class_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
+					, prefix[CLASS], id >> className, next[i] ^ newClass([att, in_att], mod, className, null, null, body)
 	
-	class_body = Block(Forms: ( (empty_block ^ null) | ((++class_member) >> b, nothing)) ) ^ b
-	
+	class_body = Pair(Left: _ >> newInput, Right: (Block(Forms: ( (empty_block ^ null) | ((++(class_member)) >> body, nothing)) ) ^ body) ), $(success(newInput, body)) 
+
 	nothing = ~_
+
+	class_member = type_def | method  | field | event_def | property_def | enum_def
 	
-	class_member = type_def | method  | field | event_def | property_def
+	enum_def = --attributes_line >> att, here >> i, enum_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
+					, prefix[ENUM], id >> name, next[i] ^ newEnum([att, in_att], mod, name, body)
 	
-	enum_def = Pair(Left: Prefix(Operator: ENUM, Operand: id >> r), 
-					Right: enum_body >> body
-					) ^ newEnum(null, null, r, body)
+	enum_body = Pair(
+						Left: _ >> newInput, \
+						Right: (
+							(empty_block ^ null) \
+							| (Block(Forms: (++enum_field >> fields) ) ^ fields)
+						) >> body
+					), $(success(newInput, body)) 
 	
-	enum_body = (empty_block ^ null) | (Block(Forms: (++enum_field >> fields) ) ^ fields)
-	
-	enum_field = Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name ^ newEnumField(null, name, e)
+	enum_field = --attributes_line >> att, here >> i, inline_attributes >> in_att, \
+					(Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name), next[i] ^ newEnumField([att, in_att], name, e)
 	
 	method = (--attributes_line >> att, here >> i, method_body >> body, inline_attributes >> in_att, member_modifiers >> mod, \
-				prefix[DEF], optional_type >> type, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, null, type, body)
-				
+				prefix[DEF], optional_type >> type, method_result_attributes >> ra, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, ra, type, body)
+
 	here = $(success(input, input))
 	next[i] = $(success((i as OMetaInput).Tail, (i as OMetaInput).Tail))
 	
 	method_body = Pair(	Left: _ >> newInput, Right: (block >> body)), $(success(newInput, body))
 	
-	method_parameters = Brackets(Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [null, null])) >> p) ^ p
+	method_parameters = Brackets(Kind: BracketType.Parenthesis, Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [null, null])) >> p) ^ p
 
 	method_parameter_list = (parameter >> p ^ [[p], null]) \
 							| (param_array >> pa ^ [null, pa]) \
 							| (Tuple(Forms: (++parameter >> p, (param_array | "") >> pa, ~_)) ^ [p, pa])
 			
-	parameter = --attributes_line >> att, inline_attributes >> in_att, optional_type >> type, id >> name ^ newParameterDeclaration([att, in_att], name, type)
+	parameter = --attributes_line >> att, here >> i, inline_attributes >> in_att, optional_type >> type, id >> name, next[i] ^ newParameterDeclaration([att, in_att], name, type)
 	param_array = --attributes_line >> att, inline_attributes >> in_att, optional_array_type >> type, prefix[STAR], id >> name ^ newParameterDeclaration([att, in_att], name, type)
 	
 	
-	optional_array_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference_array >> e), $(success(newInput, e)) )| ""
+	optional_array_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference_array >> e), $(success(newInput, e)) ) | ""
 	
+	method_result_attributes = (Prefix(Operator: _ >> newInput, Operand: inline_attributes >> attr and (len(attr) > 0)), $(success(newInput, attr))) | ""
 	
 	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
 				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
@@ -139,9 +148,20 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 
 	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, \
-						optional_type >> type, (id |prefix[id])  >> name, next[i] ^ newProperty([att, in_att], mod, name, null, type, (gs as List)[0], (gs as List)[1]) /*TODO*/
+						optional_type >> type, (id |prefix[id])  >> name, property_parameters >> params, next[i] ^ newProperty([att, in_att], mod, name, params, type, (gs as List)[0], (gs as List)[1]) /*TODO*/
 						
 	property_body = Pair(Left: _ >> newInput, Right: get_set >> gs), $(success(newInput, gs)) 
+	
+	property_parameters = Brackets(
+									Kind: BracketType.Square, 
+									Form: (
+											Tuple(Forms: ((++parameter >> p, ~_) ^ p) )
+											| (parameter >> p ^ [p]) 
+											| ( (_ >> p and (p is null)) ^ [null])
+									) >> p
+							) ^ p | ""
+	
+	
 	
 	get_set = Block(Forms: (
 							(property_getter >> pg, property_setter >> ps, ~_)
@@ -155,7 +175,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	property_setter = accessor[SET]
 
 
-	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: block >> body) \
+	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: (block) >> body) \
 						^ newMethod([att, in_att], mod, tokenValue(name), [[],null], null, null, body)
 
 	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
@@ -163,7 +183,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	inline_attributes = inline_attributes_prescan | ("" ^ [])
 							
 	inline_attributes_prescan = (Prefix(Operator: attributes_group >> l, Operand: (inline_attributes_prescan >> r, _ >> newInput)), $(success(newInput, prepend(l, r))) )\
-							| (Prefix(Operator: attributes_group >> l, Operand: (~inline_attributes_prescan, _ >> newInput)), $(success(newInput, l)) )
+							| (Prefix(Operator: attributes_group >> l, Operand: (~inline_attributes_prescan, _ >> newInput)), $(success(newInput, l)) )\
+							| attributes_group
 
 	def success(input, value):
 		return SuccessfulMatch(input, value) if input isa OMetaInput
@@ -223,10 +244,21 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	array_literal_multi = Brackets(Kind: BracketType.Parenthesis, 
 									Form: (
-										Tuple(Forms: array_literal_multi_items >> tl) | 
-										Pair(Left: array_literal_type >> type, Right: Tuple(Forms: array_literal_multi_items >> tl))
+										Tuple(Forms: array_literal_multi_items >> items) | 
+										Prefix(Operator: OF, Operand: Tuple(Forms: (array_item_with_type >> type, array_literal_multi_items >> items) ))
 									)
-							) ^ newArrayLiteral(type, tl)
+							) ^ newArrayLiteral(getArrayType(type), getArrayItmes(type, items))
+
+	def getArrayType(type as List):
+		return type[0] if type is not null
+		
+	def getArrayItmes(type as List, items):
+		return items if type is null
+		return prepend(type[1], items)
+
+
+	#First item is a pair of array type and first item of array
+	array_item_with_type = Pair(Left: type_reference >> type, Right: assignment >> a) ^ [ArrayTypeReference(ElementType: type, Rank: null), a]
 	
 	array_literal_type = Prefix(Operator: OF, Operand: type_reference >> type) ^ ArrayTypeReference(ElementType: type, Rank: null)
 	
@@ -247,7 +279,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR \
 					| DIVISION | BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT | GREATER_THAN_EQ | GREATER_THAN \
-					| LESS_THAN_EQ | LESS_THAN	
+					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY
+
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
 	
@@ -279,16 +312,22 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	member_reference_left = (Infix(Operator: DOT, Left: member_reference >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
 	
-	member_reference = Infix(Operator: DOT, Left: member_reference >> e, Right: id >> name) ^ newMemberReference(e, name) | reference
+	member_reference = Infix(Operator: DOT, Left: member_reference >> e, Right: id >> name) ^ newMemberReference(e, name) | (reference | invocation | invocation_expression | atom)
 	
 	invocation_arguments = Brackets(
 								Kind: BracketType.Parenthesis,
 								Form: (
-										(Tuple(Forms: (++assignment >> a, ~_) ) ^ a) \
-										| (assignment >> a ^ [a]) \
+										(Tuple(Forms: (++(invocation_argument) >> a, ~_) ) ^ a) \
+										| (invocation_argument >> a ^ [a]) \
 										| ((_ >> a and (a == null)) ^ [])
 								) >> args
 							) ^ args
+	
+
+	
+	invocation_argument = named_argument | assignment
+	
+	named_argument = Pair(IsMultiline: _ >> ml and (ml == false), Left: id >> name, Right: assignment >> value) ^ newNamedArgument(name, value)
 	
 	optional_invocation_arguments = invocation_arguments | (~~_ ^ null)
 	block = empty_block | (Block(Forms: (++(stmt >> s ^ getStatement(s)) >> a, nothing) ) ^ newBlock(null, null, a, null)) | (stmt >> s ^ newBlock(null, null, s, null))

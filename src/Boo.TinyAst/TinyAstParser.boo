@@ -134,17 +134,19 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		--EOL,
 		((namespace_declaration >> ns, eol) | ""),
 		--import_declaration >> ids,
-		(++(form_stmt >> f ^ newMacroStatement(f)) >> forms | ""),
+		((block >> b ^ [newMacroStatement(b)]) >> forms | ""),
 		--EOL
 	) ^ newModule(ns, s, ids, [], forms)
 
 	form = multi_line_pair | single_line_form
 	
-	single_line_form = single_line_pair | infix_operator
+	single_line_form = (single_line_pair >> p and ( (p isa Pair) and (not (p as Pair).Right isa Tuple) and (not(p as Pair).Left isa Tuple) )) | inline_block2  | infix_operator
 
 	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (single_line_form >> f, ( (--SEMICOLON, eol)| ++SEMICOLON))) ^ f
 
 	block = (++(form_stmt) >> forms) ^ newBlock(forms)
+
+
 
 	single_line_pair = (single_line_pair_prescan >> p and (p isa Pair)) ^ p
 	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false, null)) | infix_operator
@@ -162,12 +164,17 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infix_operator = inline_block
 	
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
-	
+	inline_block2 = (inline_block2 >> t, SEMICOLON, prefix_expression2 >> last ^ newBlock(t, last)) | prefix_expression2
+
 	prefix_expression = (tuple >> op, prefix_expression >> e ^ Prefix(op, e, false)) | tuple #right infix
+	prefix_expression2 = (tuple2 >> op, prefix_expression2 >> e ^ Prefix(op, e, false)) | tuple2 #right infix	
 	
-	tuple = (tuple >> t, COMMA, (assignment >> last | "") ^ newTuple(t, last)) | assignment
+	tuple = (tuple >> t, COMMA, (brakets_prefix >> last | "") ^ newTuple(t, last)) | brakets_prefix
+	tuple2 = (tuple2 >> t, COMMA, (pair >> last | "") ^ newTuple(t, last)) | pair	
 	
-	#brakets_prefix = ( (brakets_prefix >> op and op isa Brackets), assignment >> e ^ Prefix(op, e, false)) | assignment
+	pair = (pair >> left, COLON, brakets_prefix >> right ^ Pair(left, right, false, null)) | brakets_prefix
+	
+	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets)), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
 	infix or_expression, OR, and_expression
