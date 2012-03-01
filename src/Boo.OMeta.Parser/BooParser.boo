@@ -558,7 +558,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	list_of invocation_argument
 	
-	named_argument = (ID >> name, COLON, assignment >> value) ^ newNamedArgument(name, value)
+	named_argument = (ID >> name, COLON, assignment >> value) ^ newNamedArgument(tokenValue(name), value)
 	
 	type_reference = (type_reference_splice \
 		| type_reference_generic_definition \
@@ -696,7 +696,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	list_of expression_pair
 
-	reference = ID >> r ^ newReference(r) 
+	reference = ID >> r ^ newReference(tokenValue(r)) 
 	
 	time_span = ((integer | float) >> f, ("ms" | 's' | 'm' | 'h' | 'd') >> tu) ^ newTimeSpanLiteral(f, tu)
 	

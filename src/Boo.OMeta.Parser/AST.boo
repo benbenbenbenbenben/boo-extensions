@@ -114,7 +114,7 @@ def newImport(qname as string, assembly, alias):
 	else:
 		importAlias =	ReferenceExpression(Name: alias) if alias is not null
 		
-	return Import(Namespace: qname, AssemblyReference: assemblyReference, Alias: importAlias)
+	return Import(ReferenceExpression(qname), assemblyReference, importAlias)
 
 def newInteger(sign, t, style as NumberStyles, suffix):
 	s = tokenValue(sign) + tokenValue(t)
@@ -317,7 +317,7 @@ def newQuasiquoteExpression(s):
 	return QuasiquoteExpression(Node: s)
 	
 def newReference(t):
-	return ReferenceExpression(Name: tokenValue(t))
+	return ReferenceExpression(Name: t)
 	
 def newMemberReference(target as Expression, name):
 	return MemberReferenceExpression(Target: target, Name: name)
