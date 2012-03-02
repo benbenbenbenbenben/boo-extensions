@@ -40,6 +40,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		AS = "as"
 		FOR = "for"
 		WHILE = "while"
+		UNLESS = "unless"
 		IN = "in"
 		NOT_IN = "not in"
 		assign = "="
@@ -54,6 +55,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		minus = "-"
 		star = "*"
 		division = "/"
+		modulus = "%"
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		bitwise_shift_left = "<<"
 		bitwise_shift_right = ">>"
@@ -90,7 +92,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt = stmt_block | stmt_line
 	
-	module_member = type_def | method
+	module_member = assembly_attribute | type_def | method
 	type_member_stmt = (type_def | method) >> tm ^ TypeMemberStatement(TypeMember: tm)
 
 	type_def = class_def | enum_def
@@ -139,6 +141,18 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	optional_array_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference_array >> e), $(success(newInput, e)) ) | ""
 	
 	method_result_attributes = (Prefix(Operator: _ >> newInput, Operand: inline_attributes >> attr and (len(attr) > 0)), $(success(newInput, attr))) | ""
+	
+	assembly_attribute = Brackets(Kind: BracketType.Square,
+									Form: (
+												(
+													(assembly_attribute_first >> a ^ [a])
+													| (	Tuple( Forms: (assembly_attribute_first >> a , ++attribute >> attr, ~_) ) ^ prepend(a, attr) ) 
+												) >> attr
+										
+									) 
+						) ^ attr
+						
+	assembly_attribute_first = Pair(Left: identifier["assembly"], Right: attribute >> a) ^ a
 	
 	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
 				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
@@ -222,6 +236,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	id = Identifier(Name: _ >> name) ^ name
 	
+	identifier[n] = Identifier(Name: _ >> name and (name == n)) ^ name
+	
 	qualified_name = (Infix(Operator: DOT, Left: qualified_name >> l, Right: id >> r) ^ ("$l.$r")) | id
 	
 	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro
@@ -279,7 +295,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR \
 					| DIVISION | BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT | GREATER_THAN_EQ | GREATER_THAN \
-					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY
+					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY | MODULUS
 
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
@@ -354,7 +370,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
 	
-	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: assignment >> e)) ^ ReturnStatement(Expression: e, Modifier: null)
+	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
+	
+	stmt_modifier = prefix[stmt_modifier_type] >> t, assignment >> e ^ newStatementModifier(t, e)
+	
+	stmt_modifier_type = (IF ^ StatementModifierType.If) | (UNLESS ^ StatementModifierType.Unless)
 	
 	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ""
 	
