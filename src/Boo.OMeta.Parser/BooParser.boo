@@ -161,7 +161,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	type_def = class_def | struct_def | interface_def | enum_def | callable_def
 	
-	callable_def = (member_modifiers >> mod, CALLABLE, ID >> name, optional_generic_parameters >> genericParameters , method_parameters >> parameters, optional_type >> type, eol) ^ newCallable(mod, name, genericParameters, parameters, type)
+	callable_def = (member_modifiers >> mod, CALLABLE, ID >> name, optional_generic_parameters >> genericParameters , method_parameters >> parameters, optional_type >> type, eol) ^ newCallable(mod, tokenValue(name), genericParameters, parameters, type)
 	
 	class_def = (
 		attributes >> attrs,

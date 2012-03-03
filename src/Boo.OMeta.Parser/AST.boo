@@ -68,7 +68,7 @@ def newIfStatement(condition as Expression, trueBlock as Block, falseBlock as Bl
 	return IfStatement(Condition: condition, TrueBlock: trueBlock, FalseBlock: falseBlock)
 	
 def newCallable(modifiers, name, genericParameters as List, parameters as List, type):
-	node = CallableDefinition(Name: tokenValue(name), ReturnType: type)
+	node = CallableDefinition(Name: name, ReturnType: type)
 	
 	#return setUpType(ClassDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)	
 	setUpMember(node, null, modifiers)
