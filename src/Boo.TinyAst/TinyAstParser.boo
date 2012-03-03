@@ -95,7 +95,13 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		lbrace = "{", enterWhitespaceAgnosticRegion
 		rbrace = "}", leaveWhitespaceAgnosticRegion
 
-	keywords "and", "as", "cast", "def", "from", "import", "if", "in", "namespace", "not", "or", "for", "isa", "is", "return"
+	keywords "and", "as", "cast", "class", "def", "from", "interface", "import", "if", "in", "namespace", "not", "or", "for", "isa", "is", "return"
+//	keywords "abstract", "and", "as", "callable", "cast", "class", "constructor", "def", "do", "elif", "else", \
+//		"ensure", "enum", "event", "except", "failure", "final", "for", "from", "goto", "if", "import", \
+//		"interface", "internal", "in", "isa", "is", "namespace", "new", "not", "null", "of", "or", "override", \
+//		"pass", "private", "protected", "public", "raise", "return", "self", "static", "struct", "super", \
+//		"then", "transient", "try", "typeof", "unless", "virtual", "while", "yield"	
+	
 	keyword[expected] = ((KW >> t) and (expected is tokenValue(t))) ^ t
 
 	hex_digit = _ >> c as char and ((c >= char('a') and c <= char('f')) or (c >= char('A') and c <= char('F'))) 

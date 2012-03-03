@@ -70,6 +70,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		PASS = "pass"
 		DEF = "def"
 		CLASS = "class"
+		INTERFACE = "interface"
 		CALLABLE = "callable"
 		DOT = "."		
 		PRIVATE = "private"
@@ -97,12 +98,32 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	module_member = assembly_attribute | type_def | method
 	type_member_stmt = (type_def | method) >> tm ^ TypeMemberStatement(TypeMember: tm)
 
-	type_def = class_def | enum_def | callable_def
+	type_def = class_def | enum_def | callable_def | interface_def
 	
 	class_def = --attributes_line >> att, here >> i, class_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
-					, prefix[CLASS], id >> className, next[i] ^ newClass([att, in_att], mod, className, null, null, body)
+					, prefix[CLASS], prefixOrId >> className, optional_super_types >> superTypes, next[i] ^ newClass([att, in_att], mod, className, null, superTypes, body)
 	
-	class_body = Pair(Left: _ >> newInput, Right: (Block(Forms: ( (empty_block ^ null) | ((++(class_member)) >> body, nothing)) ) ^ body) ), $(success(newInput, body)) 
+	class_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++class_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
+
+	interface_def = --attributes_line >> att, here >> i, interface_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
+					, prefix[INTERFACE], prefixOrId >> name, optional_super_types >> superTypes, next[i] ^ newInterface([att, in_att], mod, name, null, superTypes, body)
+
+	
+	optional_super_types = super_types | ""
+	
+	super_types = Brackets(Kind: BracketType.Parenthesis,
+						Form: (
+							(type_reference >> params)						
+							| Tuple(
+									Forms: (++type_reference >> params, ~_)
+							)									
+						)								
+					) ^ (params if params isa List else [params])
+
+	interface_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++interface_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
+	
+	interface_member = property_def | method_signature
+	method_signature = "" #TODO
 
 	nothing = ~_
 
@@ -197,6 +218,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 						^ newMethod([att, in_att], mod, tokenValue(name), [[],null], null, null, body)
 
 	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
+	prefixOrId = id \
+					|(
+							Prefix(Operator: id >> e, Operand: _ >> newInput), $(success(newInput, e))
+					)
 	
 	inline_attributes = inline_attributes_prescan | ("" ^ [])
 							
@@ -368,7 +393,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	empty_block = Block(Forms: (PASS, ~_)) ^ AST.Block()
 	
-	
 	stmt_for = Pair(Left:
 						Prefix(Operator: FOR, Operand: declaration_list[IN] >> dl),
 					Right:
@@ -386,7 +410,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_macro = (stmt_macro_head >> head | Pair(Left: stmt_macro_head >> head, Right: block >> b) ) ^ newMacro((head as List)[0], (head as List)[1], b, null)
 	
-	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
+	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
 	
 	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
 	
