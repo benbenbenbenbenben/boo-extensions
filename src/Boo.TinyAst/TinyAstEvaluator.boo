@@ -38,6 +38,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		TRUE = "true"
 		FALSE = "false"
 		AS = "as"
+		CAST = "cast"
 		FOR = "for"
 		WHILE = "while"
 		UNLESS = "unless"
@@ -305,7 +306,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	reference = id >> r ^ ReferenceExpression(Name: r)
 	
-	assignment = binary_expression | try_cast | prefix_expression | invocation | atom | member_reference | expression
+	assignment = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference | expression
 	
 	expression = generator_expression
 	
@@ -321,6 +322,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 								| Infix(Operator: next_op, Left: declaration >> l, Right: assignment >> r) ^ [[l], [r]]
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
+	
+	cast_operator = Infix(Operator: CAST, Left: assignment >> e, Right: type_reference >> typeRef)  ^ CastExpression(Target: e, Type: typeRef)
 
 	stmt_declaration = (typed_declaration >> d
 						| Infix(Operator: ASSIGN, Left: typed_declaration >> d, Right: assignment >> e)) ^ newDeclarationStatement(d, e)
