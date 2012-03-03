@@ -298,7 +298,7 @@ def newNamedArgument(name, value):
 	return ExpressionPair(First: newReference(name), Second: value)
 	
 def newInterface(attributes, modifiers, name, genericParameters, baseTypes, members):
-	return setUpType(InterfaceDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
+	return setUpType(InterfaceDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 def newInvocation(target as Expression, args as List, genericArgs as object):
 	

@@ -180,7 +180,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		attributes >> attrs,
 		member_modifiers >> mod,
 		INTERFACE, ID >> name, optional_generic_parameters >> genericParameters, super_types >> superTypes, begin_block, interface_body >> body, end_block
-	) ^ newInterface(attrs, mod, name, genericParameters, superTypes, body)
+	) ^ newInterface(attrs, mod, tokenValue(name), genericParameters, superTypes, body)
 	
 	enum_def = (
 		attributes >> attrs, 
