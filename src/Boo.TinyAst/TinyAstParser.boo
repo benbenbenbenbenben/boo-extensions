@@ -200,7 +200,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol signalled_expression, (MINUS | INCREMENT | DECREMENT), ones_complement_expression
 	prefix_symbol ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
 	infix exponentiation_expression, EXPONENTIATION, as_operator
-	infix as_operator, AS, cast_operator
+	infixr as_operator, AS, cast_operator
 	
 	infix cast_operator, CAST, postfix_operator
 	

@@ -69,6 +69,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		PASS = "pass"
 		DEF = "def"
 		CLASS = "class"
+		CALLABLE = "callable"
 		DOT = "."		
 		PRIVATE = "private"
 		PUBLIC = "public"
@@ -95,7 +96,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	module_member = assembly_attribute | type_def | method
 	type_member_stmt = (type_def | method) >> tm ^ TypeMemberStatement(TypeMember: tm)
 
-	type_def = class_def | enum_def
+	type_def = class_def | enum_def | callable_def
 	
 	class_def = --attributes_line >> att, here >> i, class_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
 					, prefix[CLASS], id >> className, next[i] ^ newClass([att, in_att], mod, className, null, null, body)
@@ -119,6 +120,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	enum_field = --attributes_line >> att, here >> i, inline_attributes >> in_att, \
 					(Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name), next[i] ^ newEnumField([att, in_att], name, e)
+	
+	callable_def = here >> i, member_modifiers >> mod, prefix[CALLABLE], optional_type >> type, prefix[id] >> name, \
+					method_parameters >> parameters, next[i] ^ newCallable(mod, name, null, parameters, type)
+	
 	
 	method = (--attributes_line >> att, here >> i, method_body >> body, inline_attributes >> in_att, member_modifiers >> mod, \
 				prefix[DEF], optional_type >> type, method_result_attributes >> ra, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, ra, type, body)
@@ -174,8 +179,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 											| ( (_ >> p and (p is null)) ^ [null])
 									) >> p
 							) ^ p | ""
-	
-	
 	
 	get_set = Block(Forms: (
 							(property_getter >> pg, property_setter >> ps, ~_)
@@ -302,7 +305,20 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	reference = id >> r ^ ReferenceExpression(Name: r)
 	
-	assignment = binary_expression | try_cast | prefix_expression | invocation | atom | member_reference
+	assignment = binary_expression | try_cast | prefix_expression | invocation | atom | member_reference | expression
+	
+	expression = generator_expression
+	
+	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)	
+	
+	generator_expression_body = prefix[FOR], (declaration_list[IN] >> dl | Prefix(Operator: declaration_list[IN], Operand: filter >> f) ) \
+							^ newGeneratorExpressionBody((dl cast List)[0], newRValue((dl cast List)[1]), f)
+	
+	filter = "" #TODO
+	
+	declaration_list[next_op] = Tuple(Forms: (--declaration >> left, Infix(Operator: next_op, Left: declaration >> l, Right: assignment >> r), --declaration >> right) ) \
+								^ [prepend(left,[l]), prepend(r, right)] \
+								| Infix(Operator: next_op, Left: declaration >> l, Right: assignment >> r) ^ [[l], [r]]
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 
@@ -311,7 +327,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	typed_declaration = Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)
 	
-	declaration = id >> name ^ newDeclaration(name, null)		
+	declaration = optional_type >> typeRef, id >> name ^ newDeclaration(name, typeRef)		
 	
 
 	prefix_expression = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
@@ -338,7 +354,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 										| ((_ >> a and (a == null)) ^ [])
 								) >> args
 							) ^ args
-	
 
 	
 	invocation_argument = named_argument | assignment
@@ -352,9 +367,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	
 	stmt_for = Pair(Left:
-						Prefix(Operator: FOR, Operand: Infix(Operator: IN, Left: declaration >> dl, Right: assignment >> e)),
+						Prefix(Operator: FOR, Operand: declaration_list[IN] >> dl),
 					Right:
-						block >> body) ^ newForStatement([dl], e, body, null, null)
+						block >> body) ^ newForStatement((dl as List)[0], newRValue((dl as List)[1]), body, null, null)
 						
 	stmt_if = Pair(Left:
 						Prefix(Operator: IF, Operand: assignment >> e),
@@ -378,7 +393,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ""
 	
-	type_reference = type_reference_simple | type_reference_array | type_reference_splice
+	type_reference = type_reference_simple | type_reference_array | type_reference_splice | type_reference_callable
 	
 	type_reference_simple = qualified_name >> name ^ SimpleTypeReference(Name: name)
 	
@@ -388,6 +403,20 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank)
 	
+	type_reference_callable = optional_type >> type, prefix[CALLABLE], \
+								Brackets(Kind: BracketType.Parenthesis,
+									Form: (
+										(type_reference >> params)
+										| (param_array_reference >> paramArray)
+										| Tuple(
+												Forms: (++type_reference >> params, (param_array_reference|"") >> paramArray, ~_)
+											)									
+									)								
+								) ^ newCallableTypeReference((params if (params isa List) else [params]), paramArray, type)
+
+
+	param_array_reference = here >> i, prefix[STAR], type_reference >> type, next[i] ^ newParameterDeclaration(null, "arg0", type)
+
 	quasi_quote = quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
 	
 	quasi_quote_module = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (--module_member >> members, --stmt >> stmts, ~_))) ^ newQuasiquoteExpression(newModule(null, null, [], members, stmts))
