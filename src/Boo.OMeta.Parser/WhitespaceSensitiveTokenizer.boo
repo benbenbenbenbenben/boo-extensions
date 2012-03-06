@@ -136,7 +136,7 @@ ometa WhitespaceSensitiveTokenizer():
 		indent = List(indentStack(input))
 		while cast(int, indent[-1]) > len(i):
 			indent.Pop()
-			input = OMetaInput.Prepend(makeToken("dedent"), input, original)
+			input = input.Prepend(makeToken("dedent"), original)
 
 		input = setIndentStack(input, indent)		
 		assert sameIndent(input, i)

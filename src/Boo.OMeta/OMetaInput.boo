@@ -17,11 +17,8 @@ class OMetaInput:
 			return EnumeratorInput(enumerator, position, prev)
 		return EndOfEnumeratorInput(position, prev)
 		
-	static def Prepend(argument, input as OMetaInput, prev as OMetaInput) as OMetaInput:
-		return OMetaInputCons(argument, input, prev)
-		
-	static def Singleton(o):
-		return Prepend(o, Empty(), null)
+	static def Singleton(o) as OMetaInput:
+		return OMetaInputCons(o, Empty(), null)
 		
 	static def Empty():
 		return OMetaInput()
@@ -43,6 +40,9 @@ class OMetaInput:
 
 	virtual Prev as OMetaInput:
 		get: return null
+
+	virtual def Prepend(argument, prev as OMetaInput) as OMetaInput:
+		return OMetaInputCons(argument, self, prev)
 
 	virtual def SetMemo(key as string, value) as OMetaInput:
 		return OMetaInputWithMemo(key, value, self, Prev)
@@ -96,9 +96,13 @@ internal class OMetaInputWithMemo(DelegatingInput):
 		_prev = prev
 	
 	protected def constructor(input as OMetaInput, prev, dictionary as ListDictionary):
+		self(input, prev, dictionary, null)
+
+	protected def constructor(input as OMetaInput, prev, dictionary as ListDictionary, tail as OMetaInput):
 		super(input)
 		_dictionary = dictionary
 		_prev = prev
+		_tail = tail
 	
 	protected def Clone():
 		dictionaryCopy = ListDictionary()
@@ -123,6 +127,9 @@ internal class OMetaInputWithMemo(DelegatingInput):
 		if _dictionary.Contains(key): return _dictionary[key]
 		return _input.GetMemo(key)
 		
+	override def Prepend(argument, prev as OMetaInput) as OMetaInput:
+		return OMetaInputWithMemo(_input.Prepend(argument, prev), prev, _dictionary, self)
+		
 internal class OMetaInputMemoTail(DelegatingInput):
 	
 	final _parent as OMetaInputWithMemo
@@ -130,9 +137,13 @@ internal class OMetaInputMemoTail(DelegatingInput):
 	final _prev as OMetaInput
 	
 	def constructor(parent as OMetaInputWithMemo, input as OMetaInput, prev as OMetaInput):
+		self(parent, input, prev, null)
+
+	def constructor(parent as OMetaInputWithMemo, input as OMetaInput, prev as OMetaInput, tail as OMetaInput):
 		super(input)
 		_parent = parent
 		_prev = prev
+		_tail = tail
 		
 	override Prev:
 		get: return _prev
@@ -145,7 +156,10 @@ internal class OMetaInputMemoTail(DelegatingInput):
 		
 	override def GetMemo(key as string):
 		return _parent.GetMemo(key)
-		
+
+	override def Prepend(argument, prev as OMetaInput) as OMetaInput:
+		return OMetaInputMemoTail(_parent, _input.Prepend(argument, prev), prev, self)
+
 internal class OMetaInputCons(OMetaInput):
 	[getter(Head)] _head as object
 	[getter(Tail)] _tail as OMetaInput
@@ -208,3 +222,4 @@ internal class EndOfEnumeratorInput(OMetaInput):
 
 	[getter(Position)]
 	_position as int
+
