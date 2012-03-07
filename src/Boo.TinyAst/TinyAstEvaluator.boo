@@ -26,7 +26,7 @@ it generates:
 	for stmt in keywordsAndTokens.Body.Statements:
 		match stmt:
 			case ExpressionStatement(Expression: [| $name = $pattern |]):
-				e = [| $(ReferenceExpression(Name: name.ToString().ToUpper())) = Identifier(Name: $pattern >> name) ^ makeToken($(StringLiteralExpression(name.ToString().ToUpper())) , name) |]
+				e = [| $(ReferenceExpression(Name: name.ToString().ToUpper())) = Identifier(Name: ($pattern >> name, ~_)) ^ makeToken($(StringLiteralExpression(name.ToString().ToUpper())) , name) |]
 				e.LexicalInfo = stmt.LexicalInfo
 				block.Add(e)
 
@@ -44,7 +44,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		UNLESS = "unless"
 		IN = "in"
 		NOT_IN = "not in"
-		assign = "="
 		OF = "of"
 		IF = "if"
 		NOT = "not"
@@ -57,11 +56,16 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		star = "*"
 		division = "/"
 		modulus = "%"
+		semicolon = ";"
+		bitwise_and = "&"
+		bitwise_or = "|"		
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		bitwise_shift_left = "<<"
 		bitwise_shift_right = ">>"
 		equality = "=="
 		inequality = "!="
+		assign = "="		
+		closure_separator = "=>"
 		greater_than_eq = ">="
 		greater_than = ">"
 		less_than_eq = "<="
@@ -69,6 +73,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		ENUM = "enum"
 		PASS = "pass"
 		DEF = "def"
+		DO = "do"
 		CLASS = "class"
 		INTERFACE = "interface"
 		CALLABLE = "callable"
@@ -155,7 +160,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	method_body = Pair(	Left: _ >> newInput, Right: (block >> body)), $(success(newInput, body))
 	
-	method_parameters = Brackets(Kind: BracketType.Parenthesis, Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [null, null])) >> p) ^ p
+	method_parameters = Brackets(Kind: BracketType.Parenthesis, Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [[], null])) >> p) ^ p
+	
+	optional_parameters = method_parameters | ("" ^ [[], null])
 
 	method_parameter_list = (parameter >> p ^ [[p], null]) \
 							| (param_array >> pa ^ [null, pa]) \
@@ -181,9 +188,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 						
 	assembly_attribute_first = Pair(Left: identifier["assembly"], Right: attribute >> a) ^ a
 	
-	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, field_initializer >> initializer \
-				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
-				
 	event_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, optional_type >> type, prefix[EVENT], \
 					optional_type >> type, id >> name, next[i] ^ newEvent([att, in_att], mod, name, type)
 
@@ -229,9 +233,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							| (Prefix(Operator: attributes_group >> l, Operand: (~inline_attributes_prescan, _ >> newInput)), $(success(newInput, l)) )\
 							| attributes_group
 
-	def success(input, value):
-		return SuccessfulMatch(input, value) if input isa OMetaInput
-		return SuccessfulMatch(OMetaInput.Singleton(input), value)
+
 
 	attributes_line =  Prefix(Operator: attributes_group >> l, Operand: attributes_line >> r) ^ prepend(l, r) | (attributes_group >> a ^ a)
 	attributes_group = Brackets(Kind:BracketType.Square, Form: attribute_list >> attrs) ^ attrs
@@ -258,12 +260,19 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 				(ABSTRACT ^ TypeMemberModifiers.Abstract) | 
 				(NEW ^ TypeMemberModifiers.New)
 			)
-	
-	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: assignment >> e), $(success(newInput, e)) )| ""
+	field = --attributes_line >> att, here >> i, (multiline_pair_block | "") >> body, inline_attributes >> in_att, member_modifiers >> mod\
+				, field_initializer >> initializer \
+				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, getInitializer(initializer, body))
+				
+	def getInitializer(initializer, body):
+		return newBlockExpression(null, null, initializer, body) if body is not null and initializer is not null
+		return initializer
+
+	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: (assignment | block_expression_left) >> e), $(success(newInput, e)) )| ""
 	
 	optional_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference >> e), $(success(newInput, e)) )| ""
 	
-	id = Identifier(Name: _ >> name) ^ name
+	id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false), IsSymbol: _ >> s and (s == false)) ^ name
 	
 	identifier[n] = Identifier(Name: _ >> name and (name == n)) ^ name
 	
@@ -271,10 +280,26 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro
 	
-	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression)
+	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block
+	
+	stmt_expression_block = here >> i, multiline_pair_block >> body, \
+										Infix(
+												Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
+												Left: expression >> l,
+												Right: block_expression_left >> parameters
+										), next[i] ^ ExpressionStatement(newInfixExpression(op, l, newBlockExpression(null, null, parameters, body)))
+	
+	multiline_pair_block = Pair(IsMultiline: _ >> ml and (ml == true), Right: block >> body, Left: _ >> newInput), $(success(newInput, body))
+	
+	
+	block_expression_left = closure_block_left
+	
+	closure_block_left = ((prefix[DEF] | prefix[DO]), method_parameters >> parameters) ^ parameters \
+						| ( (DEF | DO) ^ [[], null])
+	
 	stmt_block = stmt_if | stmt_for | stmt_while
 	
-	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote | splice_expression
+	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote | splice_expression | closure
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
 	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
@@ -285,6 +310,22 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	booparser_string_interpolation = $(callExternalParser("string_interpolation_items", "Boo.OMeta.Parser.BooParser", input)) >> items ^ newStringInterpolation(items)
 	
+	closure	= Brackets( 
+						Kind: BracketType.Curly,
+						Form: (
+								Infix(Operator: CLOSURE_SEPARATOR, Left: parameter >> p, Right: closure_stmt_list >> e) \
+								| (closure_stmt_list >> e)
+						)
+				) ^ newBlockExpression(null, null, [([]if p is null else [p]),null], newBlock(null, null, e, null))
+	
+	closure_stmt_list = (closure_stmt >> s ^ [s]) | (Block(Forms: ++closure_stmt >> s) ^ s)
+	
+	closure_stmt = closure_stmt_expression | closure_stmt_return
+	
+	closure_stmt_expression = (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ) ^ ExpressionStatement(Expression: e, Modifier: m)
+	
+	closure_stmt_return	= (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
+		
 	array_literal = array_literal_multi
 	
 	array_literal_multi = Brackets(Kind: BracketType.Parenthesis, 
@@ -327,13 +368,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY | MODULUS
 
 	
-	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: assignment >> r) ^ newInfixExpression(op, l, r)
+	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: (assignment >> r)) ^ newInfixExpression(op, l, r)
 	
 	reference = id >> r ^ ReferenceExpression(Name: r)
 	
 	assignment = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference | expression
 	
-	expression = generator_expression
+	expression = generator_expression | (~Infix(Operator: (ASSIGN | ASSIGN_INPLACE)), assignment)
 	
 	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)	
 	
@@ -412,7 +453,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
 	
-	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
+	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m) \
+					| return_block_expression
+
+	return_block_expression = here >> i, multiline_pair_block >> body, prefix[RETURN], block_expression_left >> parameters, next[i] \
+								^ ReturnStatement(Expression: newBlockExpression(null, null, parameters, body))
 	
 	stmt_modifier = prefix[stmt_modifier_type] >> t, assignment >> e ^ newStatementModifier(t, e)
 	
@@ -489,3 +534,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 			return sm
 			
 		return result
+
+def success(input, value):
+	return SuccessfulMatch(input, value) if input isa OMetaInput
+	return SuccessfulMatch(OMetaInput.Singleton(input), value)
+
+def success(input as OMetaInput):
+	return success(input, null)
+	
+def fail(input as OMetaInput, reason as RuleFailure):
+	return FailedMatch(input, reason)

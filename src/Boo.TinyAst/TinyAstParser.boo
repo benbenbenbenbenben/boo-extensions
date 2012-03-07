@@ -55,6 +55,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		splice_begin = "$"
 		equality = "=="
 		inequality = "!="
+		closure_separator = "=>"
 		assign = "="
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="	
 		xor = "^"		
@@ -146,7 +147,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	form = multi_line_pair | single_line_form
 	
-	single_line_form = (single_line_pair >> p and ( (p isa Pair) and (not (p as Pair).Right isa Tuple) and (not(p as Pair).Left isa Tuple) )) | inline_block2  | infix_operator
+	single_line_form = (single_line_pair >> p and ( (p isa Pair) and (not (p as Pair).Right isa Tuple) and (not(p as Pair).Left isa Tuple) )) | closure_separation2  | infix_operator
 
 	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (single_line_form >> f, ( (--SEMICOLON, eol)| ++SEMICOLON))) ^ f
 
@@ -167,7 +168,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		tqs >> s,
 		INDENT) ^ s	
 	
-	infix_operator = inline_block
+	infix_operator = closure_separation
+	
+	infixr closure_separation, CLOSURE_SEPARATOR, inline_block
+	infixr closure_separation2, CLOSURE_SEPARATOR, inline_block2
 	
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
 	inline_block2 = (inline_block2 >> t, SEMICOLON, prefix_expression2 >> last ^ newBlock(t, last)) | prefix_expression2
