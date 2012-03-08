@@ -96,7 +96,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		lbrace = "{", enterWhitespaceAgnosticRegion
 		rbrace = "}", leaveWhitespaceAgnosticRegion
 
-	keywords "and", "as", "cast", "class", "def", "from", "interface", "import", "if", "in", "namespace", "not", "or", "for", "isa", "is", "return"
+	keywords "and", "as", "cast", "class", "def", "from", "interface", "import", "if", "in", "namespace", "not", "or", "for", "isa", "is", "return", "raise"
 //	keywords "abstract", "and", "as", "callable", "cast", "class", "constructor", "def", "do", "elif", "else", \
 //		"ensure", "enum", "event", "except", "failure", "final", "for", "from", "goto", "if", "import", \
 //		"interface", "internal", "in", "isa", "is", "namespace", "new", "not", "null", "of", "or", "override", \

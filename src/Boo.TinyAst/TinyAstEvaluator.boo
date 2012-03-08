@@ -93,6 +93,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		GET = "get"
 		SET = "set"
 		RETURN = "return"
+		RAISE = "raise"
 		THEN = "then"
 		SPLICE_BEGIN = "$"
 
@@ -278,24 +279,40 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	qualified_name = (Infix(Operator: DOT, Left: qualified_name >> l, Right: id >> r) ^ ("$l.$r")) | id
 	
-	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro
+	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro | stmt_raise
 	
 	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block
 	
-	stmt_expression_block = here >> i, multiline_pair_block >> body, \
+	stmt_expression_block = invocation_with_block_assignment | closure_block_assignment | dsl_friendly_invocation_assignment
+	
+	closure_block_assignment = here >> i, multiline_pair_block >> body, \
 										Infix(
 												Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
 												Left: expression >> l,
-												Right: block_expression_left >> parameters
+												Right: closure_block_left >> parameters
 										), next[i] ^ ExpressionStatement(newInfixExpression(op, l, newBlockExpression(null, null, parameters, body)))
 	
 	multiline_pair_block = Pair(IsMultiline: _ >> ml and (ml == true), Right: block >> body, Left: _ >> newInput), $(success(newInput, body))
 	
+	invocation_with_block_assignment = here >> i, multiline_pair_block >> body, \
+										Prefix(
+											Operator:
+												Infix(
+														Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
+														Left: expression >> l,
+														Right: invocation >> r
+												),
+											Operand: closure_block_left >> parameters
+										), next[i] ^ ExpressionStatement(newInfixExpression(op, l, newInvocationWithBlock(r, newBlockExpression(null, null, parameters, body))))	
+	
+	dsl_friendly_invocation_assignment = ~_
 	
 	block_expression_left = closure_block_left
-	
+		
 	closure_block_left = ((prefix[DEF] | prefix[DO]), method_parameters >> parameters) ^ parameters \
 						| ( (DEF | DO) ^ [[], null])
+						
+
 	
 	stmt_block = stmt_if | stmt_for | stmt_while
 	
@@ -456,6 +473,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m) \
 					| return_block_expression
 
+	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
+	
 	return_block_expression = here >> i, multiline_pair_block >> body, prefix[RETURN], block_expression_left >> parameters, next[i] \
 								^ ReturnStatement(Expression: newBlockExpression(null, null, parameters, body))
 	
