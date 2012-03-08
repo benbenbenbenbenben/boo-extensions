@@ -145,21 +145,14 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		--EOL
 	) ^ newModule(ns, s, ids, [], forms)
 
-	form = multi_line_pair | single_line_form
-	
-	single_line_form = (single_line_pair >> p and ( (p isa Pair) and (not (p as Pair).Right isa Tuple) and (not(p as Pair).Left isa Tuple) )) | closure_separation2  | infix_operator
+	form = multi_line_pair | infix_operator
 
-	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (single_line_form >> f, ( (--SEMICOLON, eol)| ++SEMICOLON))) ^ f
+	form_stmt = --(--SEMICOLON, eol), ((multi_line_pair >> f) | (infix_operator >> f, ( (--SEMICOLON, eol)| ++SEMICOLON))) ^ f
 
 	block = (++(form_stmt) >> forms) ^ newBlock(forms)
 
-
-
-	single_line_pair = (single_line_pair_prescan >> p and (p isa Pair)) ^ p
-	single_line_pair_prescan = (single_line_pair_prescan >> left, COLON, single_line_form >> right ^ Pair(left, right, false, null)) | infix_operator
-
 	multi_line_pair = (multi_line_pair_prescan >> p and ((p isa Pair) and (p as Pair).IsMultiline)) ^ p
-	multi_line_pair_prescan = (multi_line_pair_prescan >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT ^ Pair(left, right, true, doc)) | single_line_form
+	multi_line_pair_prescan = (multi_line_pair_prescan >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT ^ Pair(left, right, true, doc)) | infix_operator
 
 	begin_block = COLON, INDENT
 
@@ -171,18 +164,14 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infix_operator = closure_separation
 	
 	infixr closure_separation, CLOSURE_SEPARATOR, inline_block
-	infixr closure_separation2, CLOSURE_SEPARATOR, inline_block2
 	
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
-	inline_block2 = (inline_block2 >> t, SEMICOLON, prefix_expression2 >> last ^ newBlock(t, last)) | prefix_expression2
 
-	prefix_expression = (tuple >> op, prefix_expression >> e ^ Prefix(op, e, false)) | tuple #right infix
-	prefix_expression2 = (tuple2 >> op, prefix_expression2 >> e ^ Prefix(op, e, false)) | tuple2 #right infix	
+	prefix_expression = (tuple >> op, prefix_expression >> e ^ Prefix(op, e, false)) | tuple #right infix	
 	
-	tuple = (tuple >> t, COMMA, (brakets_prefix >> last | "") ^ newTuple(t, last)) | brakets_prefix
-	tuple2 = (tuple2 >> t, COMMA, (pair >> last | "") ^ newTuple(t, last)) | pair	
+	tuple = (tuple >> t, COMMA, (pair >> last | "") ^ newTuple(t, last)) | pair	
 	
-	pair = (pair >> left, COLON, brakets_prefix >> right ^ Pair(left, right, false, null)) | brakets_prefix
+	pair = (pair >> left, COLON, infix_operator >> right ^ Pair(left, right, false, null)) | brakets_prefix
 	
 	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets)), assignment >> e ^ Prefix(op, e, false)) | assignment
 	

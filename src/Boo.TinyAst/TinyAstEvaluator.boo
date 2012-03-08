@@ -343,25 +343,19 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_stmt_return	= (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
 		
-	array_literal = array_literal_multi
+	array_literal = array_literal_multi | array_literal_multi_typed
 	
-	array_literal_multi = Brackets(Kind: BracketType.Parenthesis, 
-									Form: (
-										Tuple(Forms: array_literal_multi_items >> items) | 
-										Prefix(Operator: OF, Operand: Tuple(Forms: (array_item_with_type >> type, array_literal_multi_items >> items) ))
+	array_literal_multi = Brackets(
+									Kind: BracketType.Parenthesis, 
+									Form: ( 
+										Tuple(Forms: (++assignment >> items, ~_) )
 									)
-							) ^ newArrayLiteral(getArrayType(type), getArrayItmes(type, items))
-
-	def getArrayType(type as List):
-		return type[0] if type is not null
-		
-	def getArrayItmes(type as List, items):
-		return items if type is null
-		return prepend(type[1], items)
-
-
-	#First item is a pair of array type and first item of array
-	array_item_with_type = Pair(Left: type_reference >> type, Right: assignment >> a) ^ [ArrayTypeReference(ElementType: type, Rank: null), a]
+								) ^ newArrayLiteral(null, items)
+	array_literal_multi_typed = Brackets(
+									Kind: BracketType.Parenthesis, 
+									Form: ( prefix[OF], Pair(Left: type_reference >> type, Right: Tuple(Forms: (++assignment >> items, ~_) ))
+									)
+								) ^ newArrayLiteral(ArrayTypeReference(ElementType: type, Rank: null), items)
 	
 	array_literal_type = Prefix(Operator: OF, Operand: type_reference >> type) ^ ArrayTypeReference(ElementType: type, Rank: null)
 	
