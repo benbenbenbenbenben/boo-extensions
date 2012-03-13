@@ -475,6 +475,7 @@ def isCharInput(input as OMetaInput):
 	
 def prepend(first, tail as List):
 	return tail if first is null
+	return [first] if tail is null and not first isa List 
 	return (first as List) + tail if first isa List
 	return [first] + tail
 	
