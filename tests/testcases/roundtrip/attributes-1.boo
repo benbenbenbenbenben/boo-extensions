@@ -23,7 +23,7 @@ class Person:
 		_lname = lname
 	[memoize]
 	[before((null != _fname)), before((null != _lname))]
-	def (GetName()[capitalize] as string):
+	def GetName()[capitalize] as string:
 		return '\${_fname} \${_lname}'
 	[XmlAttribute]
 	Age as int:

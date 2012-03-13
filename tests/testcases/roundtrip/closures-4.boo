@@ -5,7 +5,7 @@ button = Button()
 if button:
 	(button . Click) += def ():
 		print('yes, it was!')
-	if (3 > 2):
+	if 3 > 2:
 		(button . Click) += def (sender):
 			print('${sender} clicked!')
 """

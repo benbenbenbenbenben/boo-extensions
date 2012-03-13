@@ -1,5 +1,5 @@
 """
-for (item in []):
+for item in []:
 	pass
 then:
 	return 1
