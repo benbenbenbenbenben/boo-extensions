@@ -106,13 +106,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	type_def = class_def | enum_def | callable_def | interface_def
 	
-	class_def = --attributes_line >> att, here >> i, class_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
-					, prefix[CLASS], prefixOrId >> className, optional_super_types >> superTypes, next[i] ^ newClass([att, in_att], mod, className, null, superTypes, body)
+	class_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[CLASS], class_body >> body \
+					, prefixOrId >> className, optional_super_types >> superTypes, next[i] ^ newClass([att, in_att], mod, className, null, superTypes, body)
 	
 	class_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++class_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
 
-	interface_def = --attributes_line >> att, here >> i, interface_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
-					, prefix[INTERFACE], prefixOrId >> name, optional_super_types >> superTypes, next[i] ^ newInterface([att, in_att], mod, name, null, superTypes, body)
+	interface_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[INTERFACE], interface_body >> body \
+					, prefixOrId >> name, optional_super_types >> superTypes, next[i] ^ newInterface([att, in_att], mod, name, null, superTypes, body)
 
 	
 	optional_super_types = super_types | ""
@@ -133,10 +133,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	nothing = ~_
 
-	class_member = type_def | method  | field | event_def | property_def | enum_def
+	class_member = type_def | method | property_def | field | event_def  | enum_def
 	
-	enum_def = --attributes_line >> att, here >> i, enum_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
-					, prefix[ENUM], id >> name, next[i] ^ newEnum([att, in_att], mod, name, body)
+	enum_def = --attributes_line >> att, here >> i, prefix[ENUM], enum_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
+					, id >> name, next[i] ^ newEnum([att, in_att], mod, name, body)
 	
 	enum_body = Pair(
 						Left: _ >> newInput, \
@@ -153,8 +153,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					method_parameters >> parameters, next[i] ^ newCallable(mod, name, null, parameters, type)
 	
 	
-	method = (--attributes_line >> att, here >> i, method_body >> body, inline_attributes >> in_att, member_modifiers >> mod, \
-				prefix[DEF], optional_type >> type, method_result_attributes >> ra, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, ra, type, body)
+	method = (--attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, here >> i, prefix[DEF], method_body >> body, \
+				 optional_type >> type, method_result_attributes >> ra, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, ra, type, body)
 
 	here = $(success(input, input))
 	next[i] = $(success((i as OMetaInput).Tail, (i as OMetaInput).Tail))
@@ -193,7 +193,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					optional_type >> type, id >> name, next[i] ^ newEvent([att, in_att], mod, name, type)
 
 
-	property_def = --attributes_line >> att, here >> i, property_body >> gs, inline_attributes >> in_att, member_modifiers >> mod, \
+	property_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, property_body >> gs, \
 						optional_type >> type, (id |prefix[id])  >> name, property_parameters >> params, next[i] ^ newProperty([att, in_att], mod, name, params, type, (gs as List)[0], (gs as List)[1]) /*TODO*/
 						
 	property_body = Pair(Left: _ >> newInput, Right: get_set >> gs), $(success(newInput, gs)) 
@@ -223,6 +223,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 						^ newMethod([att, in_att], mod, tokenValue(name), [[],null], null, null, body)
 
 	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
+	optional_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | ""
+	
+	prefix2[rule] = Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))
+	optional_prefix2[rule] = (Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))) | ""
+	
 	prefixOrId = id \
 					|(
 							Prefix(Operator: id >> e, Operand: _ >> newInput), $(success(newInput, e))
@@ -263,7 +268,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 			)
 	field = --attributes_line >> att, here >> i, (multiline_pair_block | "") >> body, inline_attributes >> in_att, member_modifiers >> mod\
 				, field_initializer >> initializer \
-				, optional_type >> type, id >> name, next[i] ^ newField([att, in_att], mod, name, type, getInitializer(initializer, body))
+				, optional_type >> type and (type is not null or initializer is not null or body is not null) \
+				, id >> name, next[i] ^ newField([att, in_att], mod, name, type, getInitializer(initializer, body))
 				
 	def getInitializer(initializer, body):
 		return newBlockExpression(null, null, initializer, body) if body is not null and initializer is not null
@@ -294,7 +300,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	multiline_pair_block = Pair(IsMultiline: _ >> ml and (ml == true), Right: block >> body, Left: _ >> newInput), $(success(newInput, body))
 	
-	invocation_with_block_assignment = here >> i, multiline_pair_block >> body, \
+	invocation_with_block_assignment = here >> i, \
 										Prefix(
 											Operator:
 												Infix(
@@ -302,7 +308,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 														Left: expression >> l,
 														Right: invocation >> r
 												),
-											Operand: closure_block_left >> parameters
+											Operand: (multiline_pair_block >> body, closure_block_left >> parameters)
 										), next[i] ^ ExpressionStatement(newInfixExpression(op, l, newInvocationWithBlock(r, newBlockExpression(null, null, parameters, body))))	
 	
 	dsl_friendly_invocation_assignment = ~_
@@ -389,14 +395,16 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)	
 	
-	generator_expression_body = prefix[FOR], (declaration_list[IN] >> dl | Prefix(Operator: declaration_list[IN], Operand: filter >> f) ) \
-							^ newGeneratorExpressionBody((dl cast List)[0], newRValue((dl cast List)[1]), f)
+	generator_expression_body = here >> i, prefix[FOR], optional_prefix2[filter]>> f \
+								, Infix(
+									Operator: IN,
+									Left: declaration_list >> dl,
+									Right: rvalue >> r												
+								), next[i] ^ newGeneratorExpressionBody(dl, r, f)
 	
 	filter = "" #TODO
 	
-	declaration_list[next_op] = Tuple(Forms: (--declaration >> left, Infix(Operator: next_op, Left: declaration >> l, Right: assignment >> r), --declaration >> right) ) \
-								^ [prepend(left,[l]), prepend(r, right)] \
-								| Infix(Operator: next_op, Left: declaration >> l, Right: assignment >> r) ^ [[l], [r]]
+	declaration_list = Tuple(Forms: (--declaration >> l)) | ((declaration >> l ^ [l]) >> l) ^ l
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 	
@@ -445,38 +453,52 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	empty_block = Block(Forms: (PASS, ~_)) ^ AST.Block()
 	
-	stmt_for = Pair(Left:
-						Prefix(Operator: FOR, Operand: declaration_list[IN] >> dl),
-					Right:
-						block >> body) ^ newForStatement((dl as List)[0], newRValue((dl as List)[1]), body, null, null)
+	stmt_for = here >> i, prefix[FOR], Pair(Left:
+												Infix(
+													Operator: IN,
+													Left: declaration_list >> dl,
+													Right: rvalue >> r												
+												),
+											Right:
+												block >> body), next[i] ^ newForStatement(dl, r, body, null, null)
+												
+	rvalue = assignment_list >> items ^ newRValue(items)
 						
-	stmt_if = Pair(Left:
-						Prefix(Operator: IF, Operand: assignment >> e),
+	stmt_if = here >> i, prefix[IF], Pair(Left:
+						assignment >> e,
 					Right: 
-						block >> trueBlock) ^ newIfStatement(e, trueBlock, null)
+						block >> trueBlock), next[i] ^ newIfStatement(e, trueBlock, null)
 				
 	stmt_while = Pair(Left: (prefix[WHILE], assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock ^ newWhileStatement(e, body, orBlock, thenBlock)
 	
 	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
 	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
 	
-	stmt_macro = (stmt_macro_head >> head | Pair(Left: stmt_macro_head >> head, Right: block >> b) ) ^ newMacro((head as List)[0], (head as List)[1], b, null)
+	stmt_macro = macro_id >> name |\
+					Pair(Left: macro_id >> name, Right: block >> b) | \
+					Prefix(
+						Operator: macro_id >> name, 
+						Operand: (optional_assignment_list >> args, ~_) | Pair(Left: optional_assignment_list >> args, Right: block >> b)					
+					) ^ newMacro(name, args, b, null)
+					
+	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
 	
-	stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
+	//stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
 	
 	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m) \
 					| return_block_expression
 
 	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
 	
-	return_block_expression = here >> i, multiline_pair_block >> body, prefix[RETURN], block_expression_left >> parameters, next[i] \
+	return_block_expression = here >> i, prefix[RETURN], multiline_pair_block >> body, block_expression_left >> parameters, next[i] \
 								^ ReturnStatement(Expression: newBlockExpression(null, null, parameters, body))
 	
 	stmt_modifier = prefix[stmt_modifier_type] >> t, assignment >> e ^ newStatementModifier(t, e)
 	
 	stmt_modifier_type = (IF ^ StatementModifierType.If) | (UNLESS ^ StatementModifierType.Unless)
 	
-	optional_assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a]) | ""
+	assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a])
+	optional_assignment_list = assignment_list | ""
 	
 	type_reference = type_reference_simple | type_reference_array | type_reference_splice | type_reference_callable
 	
