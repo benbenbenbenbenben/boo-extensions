@@ -117,30 +117,29 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-		code = """get: return null"""
-		//code = """[four][five,six]private foo as int"""
+		code = """
+a = [1, 2, 3].Find() do (item as int):
+	return item > 2
+"""
 	
-		booParser = BooParser()
-		m =  booParser.module(code)
+//		booParser = BooParser()
+//		m =  booParser.module(code)
 //		bp = BooParser()
 //		match bp.stmt(code):
 //			case SuccessfulMatch(Value: s)
 //		print s
-		
+
 		parser = TinyAstParser()
-		match parser.form_stmt(code):
+		match parser.block(code):
 			case SuccessfulMatch(Value: o, Input /* = Boo.TinyAst.Block()*/)
-		
-		print o
-		
+
 		cp = Boo.Lang.Compiler.CompilerParameters()
-		cp.References.Add(typeof(BooParser).Assembly)		
+		cp.References.Add(typeof(BooParser).Assembly)
 		evaluator = TinyAstEvaluator(cp)
-		#b = evaluator.invocation(OMetaInput.Singleton(o.Forms[0]))
-		b = evaluator.assignment(OMetaInput.Singleton(o))
+		b = evaluator.expansion(OMetaInput.For((o as Boo.TinyAst.Block).Forms))
 		
 		print b
-		
+
 	def normalize(s as string):
 		return s.Trim().Replace("\r\n", "\n")
 		
