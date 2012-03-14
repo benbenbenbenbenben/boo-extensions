@@ -253,7 +253,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	field = (
 		attributes >> attrs,
 		member_modifiers >> mod,
-		ID >> name, optional_type >> type, field_initializer >> initializer
+		ID >> name, (((AS, type_reference >> type), field_initializer >> initializer) | (AS, type_reference >> type) | (field_initializer >> initializer))
 	) ^ newField(attrs, mod, tokenValue(name), type, initializer)
 
 	field_initializer = (ASSIGN, block_expression) | ((ASSIGN, rvalue >> v, eol) ^ v) | eol
