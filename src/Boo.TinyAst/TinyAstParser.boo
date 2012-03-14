@@ -165,8 +165,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	//Enforcing low_pr_tuple if prefix starts from non-Keyword Identifier (macro). TODO: Optimization.
 	prefix_expression = (pair >> op, (("" and (op isa Identifier and not (op as Identifier).IsKeyword), enter_tuple2, prefix_expression >> e, leave_tuple2 ) | prefix_expression >> e) ^ Prefix(op, e, false)) | pair #right infix
 	
-	pair = (pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) \
-			| (pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
+	pair = (pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
 			| low_pr_tuple
 
 	prepend_eol = $(prependEol(input))
@@ -174,8 +173,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	def prependEol(input as OMetaInput):
 		return success(input.Prepend(makeToken("eol"), input.Prev))
 
-	low_pr_tuple = ((tuple2 | wsa), brakets_prefix >> t, COMMA, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | brakets_prefix	
+	low_pr_tuple = ((tuple2 | wsa), high_pr_pair >> t, COMMA, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | high_pr_pair	
 
+	high_pr_pair = (high_pr_pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) | brakets_prefix
+	
 	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets)), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
 	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
