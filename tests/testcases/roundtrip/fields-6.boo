@@ -5,7 +5,7 @@ class Action:
 		cb = callback
 class A:
 	[property(Go)]
-	(action = Action()) def ():
+	action = Action() def ():
 		print('Hello World')
 """
 class Action:
