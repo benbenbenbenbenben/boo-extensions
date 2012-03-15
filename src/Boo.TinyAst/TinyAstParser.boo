@@ -147,7 +147,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	form_stmt = --(--SEMICOLON, eol), form >> f, ((--SEMICOLON, eol) | ++SEMICOLON)  ^ f
 
-	block = (++(form_stmt) >> forms) ^ newBlock(forms)
+	block = (++(leave_no_ml_pair, form_stmt) >> forms) ^ newBlock(forms)
 
 	begin_block = COLON, INDENT
 
@@ -163,23 +163,46 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
 
 	//Enforcing low_pr_tuple if prefix starts from non-Keyword Identifier (macro). TODO: Optimization.
-	prefix_expression = (pair >> op, (("" and (op isa Identifier and not (op as Identifier).IsKeyword), enter_tuple2, prefix_expression >> e, leave_tuple2 ) | prefix_expression >> e) ^ Prefix(op, e, false)) | pair #right infix
+	prefix_expression = (
+							low_pr_tuple >> op
+							,( ("" and (op isa Identifier), enter_no_ml_pair) | "" )
+							,(
+								(
+									"" and (op isa Identifier and not (op as Identifier).IsKeyword)
+									, enter_tuple2
+									, prefix_expression >> e
+									, leave_tuple2
+								) | prefix_expression >> e
+							)
+							,( 
+								("" and (op isa Identifier), leave_no_ml_pair, (begin_block_with_doc >> doc | begin_block), block >> body, DEDENT, prepend_eol ) | "" 
+							) ^ newPrefix(op, e, doc, body)
+						) \
+						| low_pr_tuple #right infix
+
+	mmm = ""
+//	pair = (~no_ml_pair, pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
+//			| high_priority_prefix
+
+
+//	low_pr_tuple = ((tuple2 | wsa), ~no_tuple, high_pr_pair >> t, COMMA, mmm, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | ((enter_no_tuple, high_pr_pair >> p, leave_no_tuple) ^ p)
+	low_pr_tuple = ((tuple2 | wsa), high_pr_pair >> t, COMMA, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | high_pr_pair
 	
-	pair = (pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
-			| low_pr_tuple
-
-	prepend_eol = $(prependEol(input))
-	
-	def prependEol(input as OMetaInput):
-		return success(input.Prepend(makeToken("eol"), input.Prev))
-
-	low_pr_tuple = ((tuple2 | wsa), high_pr_pair >> t, COMMA, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | high_pr_pair	
-
 	high_pr_pair = (high_pr_pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) | brakets_prefix
 	
 	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets)), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
-	infixr assignment, (ASSIGN | ASSIGN_INPLACE), or_expression
+	
+//	l, op, r = infixr.Arguments
+//	return ExpressionStatement([| $l = ((($r >> l, $op >> op, $l >> r) ^ Infix(Identifier(tokenValue(op), false, false), l, r)) | $r) |])	
+	
+	assignment = (assignment >> l, (ASSIGN | ASSIGN_INPLACE) >> op, enter_tuple2, prefix_expression >> r, leave_tuple2 ^ Infix(Identifier(tokenValue(op), false, false), l, r)) | pair	
+	//infixr assignment, (ASSIGN | ASSIGN_INPLACE), prefix_expression
+
+	pair = (~no_ml_pair, pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
+			| or_expression
+
+
 	infix or_expression, OR, and_expression
 	infix and_expression, AND, not_expression	
 	prefix_keyword not_expression, NOT, membership_expression
@@ -212,6 +235,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol splice, SPLICE_BEGIN, at_operator
 	prefix at_operator, AT, high_priority_prefix
 
+
 	high_priority_prefix = ( (STAR | (~~DOT, ~atom /*not float, ex: .001*/, DOT)) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
 
 	prefix_of_brackets = (
@@ -238,26 +262,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	tuple = ~tuple2, ~wsa, ((atom >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) | atom)
 
-	enter_tuple2 = $(enterTuple2(input))
-	leave_tuple2 = $(leaveTuple2(input))
-
-	tuple2 = ~~_ and inTuple2(input)
-	
-	def enterTuple2(input as OMetaInput):
-		return setTuple2(input, getTuple2(input) + 1)
-
-	def leaveTuple2(input as OMetaInput):
-		return setTuple2(input, getTuple2(input) - 1)
-		
-	def inTuple2(input as OMetaInput):
-		return getTuple2(input) > 0
-
-	def getTuple2(input as OMetaInput) as int:
-		return input.GetMemo("tuple2") or 0
-		
-	def setTuple2(input as OMetaInput, value as int):
-		return success(input.SetMemo("tuple2", value))
-		
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
 	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
@@ -289,6 +293,82 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	floating_suffix = "f" | "F" | ""
 
+	def newPrefix(operator, operand, doc, block):
+		return Prefix(operator, operand, false) if block is null
+		return Prefix(operator, Pair(operand, block, true, doc), false)
+		
+
+	prepend_eol = $(prependEol(input))
+	
+	def prependEol(input as OMetaInput):
+		return success(input.Prepend(makeToken("eol"), input.Prev))
+
+
+	enter_tuple2 = $(enterTuple2(input))
+	leave_tuple2 = $(leaveTuple2(input))
+
+	tuple2 = ~~_ and inTuple2(input)
+	
+	def enterTuple2(input as OMetaInput):
+		return setTuple2(input, getTuple2(input) + 1)
+
+	def leaveTuple2(input as OMetaInput):
+		return setTuple2(input, getTuple2(input) - 1)
+		
+	def inTuple2(input as OMetaInput):
+		return getTuple2(input) > 0
+
+	def getTuple2(input as OMetaInput) as int:
+		return input.GetMemo("tuple2") or 0
+		
+	def setTuple2(input as OMetaInput, value as int):
+		return success(input.SetMemo("tuple2", value))
+
+
+	enter_no_ml_pair = $(enterNoMLPair(input))
+	leave_no_ml_pair = $(leaveNoMLPair(input))
+
+	no_ml_pair = ~~_ and inNoMLPair(input)
+	
+	def enterNoMLPair(input as OMetaInput):
+		return setNoMLPair(input, 1) if not inNoMLPair(input)
+		return success(input)
+
+	def leaveNoMLPair(input as OMetaInput):
+		return setNoMLPair(input, 0) if inNoMLPair(input)
+		return success(input)		
+		
+	def inNoMLPair(input as OMetaInput):
+		return getNoMLPair(input) > 0
+
+	def getNoMLPair(input as OMetaInput) as int:
+		return input.GetMemo("no_ml_pair") or 0
+		
+	def setNoMLPair(input as OMetaInput, value as int):
+		return success(input.SetMemo("no_ml_pair", value))
+
+	enter_no_tuple = $(enterNoTuple(input))
+	leave_no_tuple = $(leaveNoTuple(input))
+
+	no_tuple = ~~_ and inNoTuple(input)
+	
+	def enterNoTuple(input as OMetaInput):
+		return setNoTuple(input, 1) if not inNoTuple(input)
+		return success(input)
+
+	def leaveNoTuple(input as OMetaInput):
+		return setNoTuple(input, 0) if inNoTuple(input)
+		return success(input)		
+		
+	def inNoTuple(input as OMetaInput):
+		return getNoTuple(input) > 0
+
+	def getNoTuple(input as OMetaInput) as int:
+		return input.GetMemo("no_tuple") or 0
+		
+	def setNoTuple(input as OMetaInput, value as int):
+		return success(input.SetMemo("no_tuple", value))
+
 
 def newFloat(t):
 	value = double.Parse(t)
@@ -299,7 +379,9 @@ def newTuple(i):
 	return Tuple((of Form:i))
 
 def newTuple(head, tail as Form):
+	return head if head isa Tuple and tail is null
 	return Tuple((of Form:head,)) if tail is null
+	return Tuple((head as Tuple).Forms + (tail as Tuple).Forms) if tail isa Tuple and head isa Tuple
 	return Tuple((of Form:head,) + (tail as Tuple).Forms) if tail isa Tuple
 	return Tuple(array(Form,[head,tail]))
 

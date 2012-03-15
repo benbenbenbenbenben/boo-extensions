@@ -266,16 +266,16 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 				(ABSTRACT ^ TypeMemberModifiers.Abstract) | 
 				(NEW ^ TypeMemberModifiers.New)
 			)
-	field = --attributes_line >> att, here >> i, (multiline_pair_block | "") >> body, inline_attributes >> in_att, member_modifiers >> mod\
+	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod\
 				, field_initializer >> initializer \
-				, optional_type >> type and (type is not null or initializer is not null or body is not null) \
-				, id >> name, next[i] ^ newField([att, in_att], mod, name, type, getInitializer(initializer, body))
+				, optional_type >> type and (type is not null or initializer is not null) \
+				, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
 				
-	def getInitializer(initializer, body):
-		return newBlockExpression(null, null, initializer, body) if body is not null and initializer is not null
-		return initializer
+//	def getInitializer(initializer, body):
+//		return newBlockExpression(null, null, initializer, body) if body is not null and initializer is not null
+//		return initializer
 
-	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: (assignment | block_expression_left) >> e), $(success(newInput, e)) )| ""
+	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: (assignment | block_expression) >> e), $(success(newInput, e)) )| ""
 	
 	optional_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference >> e), $(success(newInput, e)) )| ""
 	
@@ -287,32 +287,28 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro | stmt_raise
 	
-	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block
+	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block | ((block_expression >> e) ^ ExpressionStatement(Expression: e))
 	
-	stmt_expression_block = invocation_with_block_assignment | closure_block_assignment | dsl_friendly_invocation_assignment
-	
-	closure_block_assignment = here >> i, multiline_pair_block >> body, \
-										Infix(
+	//stmt_expression_block = invocation_with_block_assignment | closure_block_assignment | dsl_friendly_invocation_assignment
+	stmt_expression_block = Infix(
 												Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
 												Left: expression >> l,
-												Right: closure_block_left >> parameters
-										), next[i] ^ ExpressionStatement(newInfixExpression(op, l, newBlockExpression(null, null, parameters, body)))
+												Right: block_expression >> r
+										) ^ ExpressionStatement(newInfixExpression(op, l, r))
 	
+	block_expression = invocation_with_block | closure_block | dsl_friendly_invocation
+	
+	closure_block = here >> i, multiline_pair_block >> body, \
+										 closure_block_left >> parameters, next[i] ^ newBlockExpression(null, null, parameters, body)
+	
+	invocation_with_block = here >> i, \
+										prefix[invocation] >> e, multiline_pair_block >> body, closure_block_left >> parameters \
+										, next[i] ^ newInvocationWithBlock(e, newBlockExpression(null, null, parameters, body))
+	
+	dsl_friendly_invocation = ~_
+
 	multiline_pair_block = Pair(IsMultiline: _ >> ml and (ml == true), Right: block >> body, Left: _ >> newInput), $(success(newInput, body))
-	
-	invocation_with_block_assignment = here >> i, \
-										Prefix(
-											Operator:
-												Infix(
-														Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
-														Left: expression >> l,
-														Right: invocation >> r
-												),
-											Operand: (multiline_pair_block >> body, closure_block_left >> parameters)
-										), next[i] ^ ExpressionStatement(newInfixExpression(op, l, newInvocationWithBlock(r, newBlockExpression(null, null, parameters, body))))	
-	
-	dsl_friendly_invocation_assignment = ~_
-	
+
 	block_expression_left = closure_block_left
 		
 	closure_block_left = ((prefix[DEF] | prefix[DO]), method_parameters >> parameters) ^ parameters \
@@ -485,13 +481,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	//stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
 	
-	stmt_return = (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m) \
-					| return_block_expression
+	stmt_return = here >> i, (RETURN | prefix[RETURN], (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) | block_expression >> e ) ), next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
+					#| return_block_expression
 
 	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
 	
-	return_block_expression = here >> i, prefix[RETURN], multiline_pair_block >> body, block_expression_left >> parameters, next[i] \
-								^ ReturnStatement(Expression: newBlockExpression(null, null, parameters, body))
+//	return_block_expression = here >> i, prefix[RETURN], multiline_pair_block >> body, block_expression_left >> parameters, next[i] \
+//								^ ReturnStatement(Expression: newBlockExpression(null, null, parameters, body))
 	
 	stmt_modifier = prefix[stmt_modifier_type] >> t, assignment >> e ^ newStatementModifier(t, e)
 	
