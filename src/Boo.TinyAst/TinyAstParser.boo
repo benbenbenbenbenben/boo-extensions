@@ -175,30 +175,37 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 								) | prefix_expression >> e
 							)
 							,( 
-								("" and (op isa Identifier), leave_no_ml_pair, (begin_block_with_doc >> doc | begin_block), block >> body, DEDENT, prepend_eol ) | "" 
+								("" and (op isa Identifier), (begin_block_with_doc >> doc | begin_block), block >> body, DEDENT, prepend_eol ) | "" 
 							) ^ newPrefix(op, e, doc, body)
 						) \
 						| low_pr_tuple #right infix
 
-	mmm = ""
-//	pair = (~no_ml_pair, pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
-//			| high_priority_prefix
-
-
-//	low_pr_tuple = ((tuple2 | wsa), ~no_tuple, high_pr_pair >> t, COMMA, mmm, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | ((enter_no_tuple, high_pr_pair >> p, leave_no_tuple) ^ p)
-	low_pr_tuple = ((tuple2 | wsa), high_pr_pair >> t, COMMA, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | high_pr_pair
+	low_pr_tuple = ((tuple2 | wsa), ~no_tuple, high_pr_pair >> t, COMMA, (low_pr_tuple >> last | "") ^ newTuple(t, last)) | high_pr_pair
+	
+	def newLPTuple(first, last):
+		return Tuple(array(Form,[first])) if last is null
+		return Tuple(array(Form,[first] + (last as List)))
+		
 	
 	high_pr_pair = (high_pr_pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) | brakets_prefix
 	
 	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets)), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
-	
-//	l, op, r = infixr.Arguments
-//	return ExpressionStatement([| $l = ((($r >> l, $op >> op, $l >> r) ^ Infix(Identifier(tokenValue(op), false, false), l, r)) | $r) |])	
-	
-	assignment = (assignment >> l, (ASSIGN | ASSIGN_INPLACE) >> op, enter_tuple2, prefix_expression >> r, leave_tuple2 ^ Infix(Identifier(tokenValue(op), false, false), l, r)) | pair	
-	//infixr assignment, (ASSIGN | ASSIGN_INPLACE), prefix_expression
+	assignment = ( pair >> l, (ASSIGN | ASSIGN_INPLACE) >> op, assignment >> r, (--prefix_expression) >> tail ^ Infix(Identifier(tokenValue(op), false, false), l, getRight(r, tail))) | pair
 
+	def getRight(r, tail):
+		return r if tail is null or len(tail) == 0
+		
+		result as Form
+		for i in (tail as List).Reversed:
+			if result is null:
+				result = i
+			else:
+				result = Prefix(i, result, false)
+
+		result = Prefix(r, result, false)
+		return result
+			
 	pair = (~no_ml_pair, pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) \
 			| or_expression
 
@@ -260,7 +267,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	atom = tuple | exp_in_brackets | identifier | literal
 	
-	tuple = ~tuple2, ~wsa, ((atom >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) | atom)
+	tuple = ~tuple2, ~wsa, ~no_tuple, ((atom >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) | atom)
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
