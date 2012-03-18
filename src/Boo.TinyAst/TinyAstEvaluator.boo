@@ -465,7 +465,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					Right: 
 						block >> trueBlock), next[i] ^ newIfStatement(e, trueBlock, null)
 				
-	stmt_while = Pair(Left: (prefix[WHILE], assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock ^ newWhileStatement(e, body, orBlock, thenBlock)
+	stmt_while = here >> i, prefix[WHILE], Pair(Left: (assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
 	
 	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
 	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
