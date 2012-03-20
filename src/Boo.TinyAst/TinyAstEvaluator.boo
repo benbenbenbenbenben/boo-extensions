@@ -339,11 +339,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_stmt_list = (closure_stmt >> s ^ [s]) | (Block(Forms: ++closure_stmt >> s) ^ s)
 	
-	closure_stmt = closure_stmt_expression | closure_stmt_return
+	closure_stmt = closure_stmt_expression | stmt_return | stmt_raise
 	
 	closure_stmt_expression = here >> i, (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ), next[i] ^ ExpressionStatement(Expression: e, Modifier: m)
-	
-	closure_stmt_return	= (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
 		
 	array_literal = array_literal_multi | array_literal_multi_typed
 	
@@ -479,15 +477,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					
 	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
 	
-	//stmt_macro_head = Prefix(Operator: Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)), Operand: (optional_assignment_list >> args, ~_) ) ^ [name, args]
-	
 	stmt_return = here >> i, (RETURN | prefix[RETURN], (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) | block_expression >> e ) ), next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
-					#| return_block_expression
 
 	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
-	
-//	return_block_expression = here >> i, prefix[RETURN], multiline_pair_block >> body, block_expression_left >> parameters, next[i] \
-//								^ ReturnStatement(Expression: newBlockExpression(null, null, parameters, body))
 	
 	stmt_modifier = prefix[stmt_modifier_type] >> t, assignment >> e ^ newStatementModifier(t, e)
 	
