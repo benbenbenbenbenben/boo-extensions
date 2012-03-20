@@ -341,7 +341,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_stmt = closure_stmt_expression | closure_stmt_return
 	
-	closure_stmt_expression = (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ) ^ ExpressionStatement(Expression: e, Modifier: m)
+	closure_stmt_expression = here >> i, (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ), next[i] ^ ExpressionStatement(Expression: e, Modifier: m)
 	
 	closure_stmt_return	= (RETURN | Prefix(Operator: RETURN, Operand: (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ))) ^ ReturnStatement(Expression: e, Modifier: m)
 		

@@ -187,7 +187,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	high_pr_pair = (high_pr_pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) | brakets_prefix
 	
-	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets)), assignment >> e ^ Prefix(op, e, false)) | assignment
+	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets and ((op as Brackets).Kind == BracketType.Parenthesis or (op as Brackets).Kind == BracketType.Square) )), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
 	assignment = ( or_expression >> l, (ASSIGN | ASSIGN_INPLACE) >> op, ((low_pr_pair >> r and (r isa Pair)) | assignment)  >> r, (--prefix_expression) >> tail ^ Infix(Identifier(tokenValue(op), false, false), l, getRight(r, tail))) \
 					| or_expression
@@ -254,15 +254,17 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 									#Bracket sticks to bracket
 									or (op isa Prefix and (op as Prefix).Operand isa Brackets)
 								)
-							), 	exp_in_brackets >> e ^ Prefix(op, e, false)
+							), 	sticky_brackets >> e ^ Prefix(op, e, false)
 						 ) |\
 						 (
 						 	#Keyword + Brackets. Ex: def()
 						 	#Keyword before brackets has lower priority then infix
 						 	#Ex: for (n, a) in zip(names, attributes) =>  for ((n, a) in zip(names, attributes))
 							(prefix_of_brackets >> op and (op isa Identifier and (op as Identifier).IsKeyword)), ~(assignment >> io and (io isa Infix)), 
-								exp_in_brackets >> e ^ Prefix(op, e, false)
+								sticky_brackets >> e ^ Prefix(op, e, false)
 						 ) | atom
+						 
+	sticky_brackets = paren_brackets | square_brackets
 
 	atom = tuple | atom2
 	
