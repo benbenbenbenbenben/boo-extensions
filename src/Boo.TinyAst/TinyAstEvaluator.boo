@@ -225,6 +225,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
 	optional_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | ""
 	
+	optional[rule] = (rule >> e, $(success(e, input))) | ""
+	
 	prefix2[rule] = Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))
 	optional_prefix2[rule] = (Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))) | ""
 	
@@ -232,6 +234,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					|(
 							Prefix(Operator: id >> e, Operand: _ >> newInput), $(success(newInput, e))
 					)
+	prefixOrInfix = (Prefix(Operator: _ >> e, Operand: _ >> newInput), $(success(OMetaInput.For([e, newInput]), e))) \
+					| (Infix() >> e, $(success(e, e)))
 	
 	inline_attributes = inline_attributes_prescan | ("" ^ [])
 							
@@ -285,7 +289,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	qualified_name = (Infix(Operator: DOT, Left: qualified_name >> l, Right: id >> r) ^ ("$l.$r")) | id
 	
-	stmt_line = stmt_declaration | stmt_expression | stmt_return | stmt_macro | stmt_raise
+	stmt_line = stmt_declaration \
+				| stmt_expression \
+				| stmt_return \
+				| stmt_macro \
+				| stmt_raise \
+				| stmt_unpack
 	
 	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block | ((block_expression >> e) ^ ExpressionStatement(Expression: e))
 	
@@ -318,6 +327,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_block = stmt_if | stmt_for | stmt_while
 	
+	stmt_unpack = here >> i, prefixOrInfix, Infix(Operator: ASSIGN, Left: declaration_list >> declarations, Right: rvalue >> e), optional[stmt_modifier] >> m, next[i] ^ newUnpackStatement(declarations, e, m)
+	
 	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote | splice_expression | closure
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
@@ -339,7 +350,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_stmt_list = (closure_stmt >> s ^ [s]) | (Block(Forms: ++closure_stmt >> s) ^ s)
 	
-	closure_stmt = closure_stmt_expression | stmt_return | stmt_raise
+	closure_stmt = closure_stmt_expression | stmt_return | stmt_raise | stmt_unpack
 	
 	closure_stmt_expression = here >> i, (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ), next[i] ^ ExpressionStatement(Expression: e, Modifier: m)
 		

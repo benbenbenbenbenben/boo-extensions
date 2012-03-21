@@ -181,7 +181,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	pair = (tuple2 | high_pr_pair) >> left and ((not left isa Infix) or not inTuple2(input)), (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)
 	
 	//tuple2 - comma has priority higher than prefix but lower than infix
-	tuple2 = (~in_tuple3, (in_tuple2 /*| wsa*/), high_pr_pair >> head, --(COMMA, high_pr_pair) >> tail, (COMMA | ("" and (len(tail)> 0)))     ) ^ newTuple2(head, tail)
+	tuple2 = (~in_tuple3, in_tuple2, high_pr_pair >> head, --(COMMA, high_pr_pair) >> tail, (COMMA | ("" and (len(tail)> 0)))     ) ^ newTuple2(head, tail)
 	
 	def newTuple2(head, tail):
 		return Tuple(array(Form,[head])) if tail is null
