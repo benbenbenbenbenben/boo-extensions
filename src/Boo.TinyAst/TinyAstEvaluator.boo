@@ -222,21 +222,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	accessor[key] = --attributes_line >> att, Pair(Left: (inline_attributes >> in_att, member_modifiers >> mod, key >> name), Right: (block) >> body) \
 						^ newMethod([att, in_att], mod, tokenValue(name), [[],null], null, null, body)
 
-	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
-	optional_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | ""
-	
-	optional[rule] = (rule >> e, $(success(e, input))) | ""
-	
-	prefix2[rule] = Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))
-	optional_prefix2[rule] = (Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))) | ""
-	
-	prefixOrId = id \
-					|(
-							Prefix(Operator: id >> e, Operand: _ >> newInput), $(success(newInput, e))
-					)
-	prefixOrInfix = (Prefix(Operator: _ >> e, Operand: _ >> newInput), $(success(OMetaInput.For([e, newInput]), e))) \
-					| (Infix() >> e, $(success(e, e)))
-	
 	inline_attributes = inline_attributes_prescan | ("" ^ [])
 							
 	inline_attributes_prescan = (Prefix(Operator: attributes_group >> l, Operand: (inline_attributes_prescan >> r, _ >> newInput)), $(success(newInput, prepend(l, r))) )\
@@ -350,10 +335,17 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_stmt_list = (closure_stmt >> s ^ [s]) | (Block(Forms: ++closure_stmt >> s) ^ s)
 	
-	closure_stmt = closure_stmt_expression | stmt_return | stmt_raise | stmt_unpack
+	closure_stmt = closure_stmt_expression \
+					| stmt_return \
+					| stmt_raise \
+					| stmt_unpack \
+					| closure_stmt_macro
 	
 	closure_stmt_expression = here >> i, (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ), next[i] ^ ExpressionStatement(Expression: e, Modifier: m)
-		
+
+	closure_stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_prefix_or_rule[assignment_list] >> args\
+						, optional_prefix_or_rule[stmt_modifier] >> mod, next[i] ^ newMacro(name, args, null, mod)
+
 	array_literal = array_literal_multi | array_literal_multi_typed
 	
 	array_literal_multi = Brackets(
@@ -483,7 +475,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					Pair(Left: macro_id >> name, Right: block >> b) | \
 					Prefix(
 						Operator: macro_id >> name, 
-						Operand: (optional_assignment_list >> args, ~_) | Pair(Left: optional_assignment_list >> args, Right: block >> b)					
+						Operand: (assignment_list >> args, ~_) | Pair(Left: assignment_list >> args, Right: block >> b)					
 					) ^ newMacro(name, args, b, null)
 					
 	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
@@ -535,6 +527,31 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	qq_return = (RETURN | Prefix(Operator: RETURN, Operand: assignment >> e)) ^ ReturnStatement(Expression: e, Modifier: null)
 	qq_macro = prefix[id] >> name, optional_assignment_list >> args ^ newMacro(name, args, null, null) 
+
+	#region "auxiliary rules"
+
+	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
+	optional_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | ""
+	
+	optional_prefix_or_rule[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | optional[rule]
+	
+	prefix_or_rule[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | rule
+	
+	rule_or_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | rule
+	
+	optional[rule] = (rule >> e, $(success(input, e))) | ""
+	
+	prefix2[rule] = Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))
+	optional_prefix2[rule] = (Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))) | ""
+	
+	prefixOrId = id \
+					|(
+							Prefix(Operator: id >> e, Operand: _ >> newInput), $(success(newInput, e))
+					)
+	prefixOrInfix = (Prefix(Operator: _ >> e, Operand: _ >> newInput), $(success(OMetaInput.For([e, newInput]), e))) \
+					| (Infix() >> e, $(success(e, e)))
+	
+	#endregion
 	
 	def getStatement(s):
 		return s if s isa Statement		
