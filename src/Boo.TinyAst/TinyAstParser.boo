@@ -171,10 +171,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 							,(
 								(
 									(("" and (op isa Identifier and not (op as Identifier).IsKeyword), enter_tuple2) | reset_tuple2)
-									, prefix_expression >> e
+									, ++prefix_expression >> e
 									//, (("" and (op isa Identifier and not (op as Identifier).IsKeyword), leave_tuple2) | "")
 								) 
-							) ^ newPrefix(op, e, null, null)
+							) ^ getRight(op, e)
 						) \
 						| pair | tuple2 | high_pr_pair #right infix
 
