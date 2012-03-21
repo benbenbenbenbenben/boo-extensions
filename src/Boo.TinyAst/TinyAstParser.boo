@@ -147,7 +147,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	form_stmt = --(--SEMICOLON, eol), form >> f, ((--SEMICOLON, eol) | ++SEMICOLON)  ^ f
 
-	block = (++(leave_tuple2, form_stmt) >> forms) ^ newBlock(forms)
+	block = (++(reset_tuple2, form_stmt) >> forms) ^ newBlock(forms)
 
 	begin_block = COLON, INDENT
 
@@ -161,7 +161,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	infixr closure_separation, CLOSURE_SEPARATOR, inline_block
 	
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | tuple3
-
+	
+	//tuple3 - comma has priority lower than prefix
 	tuple3 = (in_tuple3, prefix_expression >> head, COMMA, (tuple3 >> tail | "") ^ newTuple(head, tail)) | prefix_expression
 
 	//Enforcing tuple2 if prefix starts from non-Keyword Identifier (macro). TODO: Optimization.
@@ -169,9 +170,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 							high_pr_pair >> op							
 							,(
 								(
-									(("" and (op isa Identifier and not (op as Identifier).IsKeyword), enter_tuple2) | leave_tuple2)
+									(("" and (op isa Identifier and not (op as Identifier).IsKeyword), enter_tuple2) | reset_tuple2)
 									, prefix_expression >> e
-									, (("" and (op isa Identifier and not (op as Identifier).IsKeyword), leave_tuple2) | "")
+									//, (("" and (op isa Identifier and not (op as Identifier).IsKeyword), leave_tuple2) | "")
 								) 
 							) ^ newPrefix(op, e, null, null)
 						) \
@@ -179,7 +180,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	pair = (tuple2 | high_pr_pair) >> left and ((not left isa Infix) or not inTuple2(input)), (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)
 	
-	tuple2 = (~in_tuple3, (in_Tuple2 | wsa), high_pr_pair >> head, --(COMMA, high_pr_pair) >> tail, (COMMA | ("" and (len(tail)> 0)))     ) ^ newTuple2(head, tail)
+	//tuple2 - comma has priority higher than prefix but lower than infix
+	tuple2 = (~in_tuple3, (in_tuple2 /*| wsa*/), high_pr_pair >> head, --(COMMA, high_pr_pair) >> tail, (COMMA | ("" and (len(tail)> 0)))     ) ^ newTuple2(head, tail)
 	
 	def newTuple2(head, tail):
 		return Tuple(array(Form,[head])) if tail is null
@@ -243,7 +245,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	high_priority_prefix = ( (STAR | (~~DOT, ~atom /*not float, ex: .001*/, DOT)) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
 
-	low_pr_pair = (~in_Tuple2, low_pr_pair >> left and (not left isa Infix), (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) | prefix_of_brackets
+	low_pr_pair = (~in_tuple2, low_pr_pair >> left and (not left isa Infix), (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) | prefix_of_brackets
 
 	prefix_of_brackets = (
 							
@@ -271,13 +273,13 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	atom2 = exp_in_brackets | identifier | literal
 	
 
-	tuple = ~in_tuple3, ~in_Tuple2, ~wsa, ~no_tuple, ((atom2 >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) | atom2)
+	tuple = ~in_tuple3, ~in_tuple2, ~no_tuple, ((atom2 >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) | atom2)
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
 	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
 
-	paren_brackets = (LPAREN, ( form | "" ) >> f, RPAREN) ^  Brackets(f, BracketType.Parenthesis)
+	paren_brackets = (LPAREN, enter_tuple2, ( form | "" ) >> f, RPAREN, leave_tuple2) ^  Brackets(f, BracketType.Parenthesis)
 
 	qq_brackets = ((QQ_BEGIN, INDENT, block >> f, DEDENT, QQ_END) | (QQ_BEGIN, form >> f, QQ_END)) ^ Brackets(f, BracketType.QQ)
 	
@@ -341,14 +343,19 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	enter_tuple2 = $(enterTuple2(input))
 	leave_tuple2 = $(leaveTuple2(input))
+	reset_tuple2 = $(resetTuple2(input))
 
-	in_Tuple2 = ~~_ and inTuple2(input)
+	in_tuple2 = ~~_ and inTuple2(input)
 	
 	def enterTuple2(input as OMetaInput):
-		return setTuple2(input, 1)
+		return setTuple2(input, getTuple2(input) + 1)
 
 	def leaveTuple2(input as OMetaInput):
+		return setTuple2(input, getTuple2(input) - 1)
+		
+	def resetTuple2(input as OMetaInput):
 		return setTuple2(input, 0)
+		
 		
 	def inTuple2(input as OMetaInput):
 		return getTuple2(input) > 0
