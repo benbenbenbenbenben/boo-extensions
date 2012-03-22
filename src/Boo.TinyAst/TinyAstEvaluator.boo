@@ -46,6 +46,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		NOT_IN = "not in"
 		OF = "of"
 		IF = "if"
+		ELSE = "else"
 		NOT = "not"
 		IS = "is"
 		IS_NOT = "is not"
@@ -391,7 +392,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	assignment = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference | expression
 	
-	expression = generator_expression | (~Infix(Operator: (ASSIGN | ASSIGN_INPLACE)), assignment)
+	expression = generator_expression | conditional_expression | or_expression
 	
 	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)	
 	
@@ -403,6 +404,20 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 								), next[i] ^ newGeneratorExpressionBody(dl, r, f)
 	
 	filter = "" #TODO
+	
+	conditional_expression = Brackets(
+								Type: BracketsType.Parenthesis,
+								Form: (
+									prefix[or_expression] >> trueValue
+									, prefix[IF]
+									, (prefix[conditional_expression] | prefix[or_expression]) >> condition
+									, prefix[ELSE]
+									, (conditional_expression | or_expression) >> falseValue
+								)	
+							) ^ newConditionalExpression(condition, trueValue, falseValue)
+	
+	// or expression is any operator, prefix or atom except infix ASSIGN
+	or_expression = (~Infix(Operator: (ASSIGN | ASSIGN_INPLACE)), assignment)
 	
 	declaration_list = Tuple(Forms: (--declaration >> l)) | ((declaration >> l ^ [l]) >> l) ^ l
 
