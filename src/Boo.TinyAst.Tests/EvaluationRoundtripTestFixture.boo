@@ -18,7 +18,7 @@ class EvaluationRoundtripTestFixture:
 		fullName = Path.Combine(booRoundtripTestCasesPath(), fname)
 		
 		o = OMetaParseAndRun(File.ReadAllText(fullName))
-		#print o.Errors[0].InnerException if o.Errors.Count > 0
+		print o.Errors[0].InnerException.ToString().Substring(0, 1000) if o.Errors.Count > 0 and o.Errors[0].InnerException is not null
 		#assert o.Errors.Count == 0 //Have to comment this out because macroexpansion step tries to resolve attributes.
 		cu = o.CompileUnit	
 		m = cu.Modules[0]		
