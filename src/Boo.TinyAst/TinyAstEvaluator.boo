@@ -117,7 +117,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	optional_super_types = super_types | ""
 	
-	super_types = Brackets(Kind: BracketType.Parenthesis,
+	super_types = Brackets(Type: BracketsType.Parenthesis,
 						Form: (
 							(type_reference >> params)						
 							| Tuple(
@@ -161,7 +161,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	method_body = Pair(	Left: _ >> newInput, Right: (block >> body)), $(success(newInput, body))
 	
-	method_parameters = Brackets(Kind: BracketType.Parenthesis, Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [[], null])) >> p) ^ p
+	method_parameters = Brackets(Type: BracketsType.Parenthesis, Form: (method_parameter_list | ((_ >> p and (p is null)) ^ [[], null])) >> p) ^ p
 	
 	optional_parameters = method_parameters | ("" ^ [[], null])
 
@@ -177,7 +177,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	method_result_attributes = (Prefix(Operator: _ >> newInput, Operand: inline_attributes >> attr and (len(attr) > 0)), $(success(newInput, attr))) | ""
 	
-	assembly_attribute = Brackets(Kind: BracketType.Square,
+	assembly_attribute = Brackets(Type: BracketsType.Square,
 									Form: (
 												(
 													(assembly_attribute_first >> a ^ [a])
@@ -199,7 +199,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	property_body = Pair(Left: _ >> newInput, Right: get_set >> gs), $(success(newInput, gs)) 
 	
 	property_parameters = Brackets(
-									Kind: BracketType.Square, 
+									Type: BracketsType.Square, 
 									Form: (
 											Tuple(Forms: ((++parameter >> p, ~_) ^ p) )
 											| (parameter >> p ^ [p]) 
@@ -231,7 +231,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 
 	attributes_line =  Prefix(Operator: attributes_group >> l, Operand: attributes_line >> r) ^ prepend(l, r) | (attributes_group >> a ^ a)
-	attributes_group = Brackets(Kind:BracketType.Square, Form: attribute_list >> attrs) ^ attrs
+	attributes_group = Brackets(Type:BracketsType.Square, Form: attribute_list >> attrs) ^ attrs
 	
 	attribute_list = Tuple(Forms: ++attribute >> a) ^ a | (attribute >> a ^ [a])
 	
@@ -329,7 +329,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	booparser_string_interpolation = $(callExternalParser("string_interpolation_items", "Boo.OMeta.Parser.BooParser", input)) >> items ^ newStringInterpolation(items)
 	
 	closure	= Brackets( 
-						Kind: BracketType.Curly,
+						Type: BracketsType.Curly,
 						Form: (
 								Infix(Operator: CLOSURE_SEPARATOR, Left: parameter >> p, Right: closure_stmt_list >> e) \
 								| (closure_stmt_list >> e)
@@ -352,13 +352,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	array_literal = array_literal_multi | array_literal_multi_typed
 	
 	array_literal_multi = Brackets(
-									Kind: BracketType.Parenthesis, 
+									Type: BracketsType.Parenthesis, 
 									Form: ( 
 										Tuple(Forms: (++assignment >> items, ~_) )
 									)
 								) ^ newArrayLiteral(null, items)
 	array_literal_multi_typed = Brackets(
-									Kind: BracketType.Parenthesis, 
+									Type: BracketsType.Parenthesis, 
 									Form: ( prefix[OF], Pair(Left: type_reference >> type, Right: Tuple(Forms: (++assignment >> items, ~_) ))
 									)
 								) ^ newArrayLiteral(ArrayTypeReference(ElementType: type, Rank: null), items)
@@ -367,7 +367,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	array_literal_multi_items = (++assignment >> a, ~_) ^ a
 
-	list_literal = Brackets(Kind: BracketType.Square,
+	list_literal = Brackets(Type: BracketsType.Square,
 								Form: (
 									Tuple(Forms: ((++assignment >> a, ~_) ^ a) >> items)
 								)
@@ -378,7 +378,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	true_literal = TRUE ^ [| true |]
 	false_literal = FALSE ^ [| false |]
 	
-	parenthesized_expression = Brackets(Kind: BracketType.Parenthesis, Form: assignment >> e) ^ e
+	parenthesized_expression = Brackets(Type: BracketsType.Parenthesis, Form: assignment >> e) ^ e
 	
 	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR \
 					| DIVISION | BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT | GREATER_THAN_EQ | GREATER_THAN \
@@ -416,26 +416,58 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	typed_declaration = Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)
 	
 	declaration = optional_type >> typeRef, id >> name ^ newDeclaration(name, typeRef)		
-	
 
 	prefix_expression = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
 	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT
-
 	
-	invocation = invocation_expression
-	invocation_expression = here >> i, member_reference_left >> mr, Prefix(Operator: (reference | invocation | atom) >> target, Operand: invocation_arguments >> args) \
-								, next[i] ^ newInvocation(getTarget(mr, target), args, null)
+	invocation = here >> i, (collection_initialization | invocation_expression) >> e, ~_, next[i] ^ e
+	invocation_expression = here >> i, member_reference_left >> mr, prefix_operand[invocation_arguments] >> args \
+								, optional_prefix_operand[generic_arguments] >> generic_args \
+								, (reference | invocation | atom) >> target  \
+								, next[i] ^ newInvocation(getTarget(mr, target), args, generic_args)
 	
+	generic_arguments = Brackets(
+							Type: BracketsType.Square, 
+							Form:
+								Prefix(
+									Operator: OF,
+									Operand: (
+										(type_reference_list | ((type_reference >> arg) ^ [arg])) >> arg
+									)
+								)
+						) ^ arg 
+						
+	type_reference_list = ((type_reference >> t) ^ [t]) \
+						| (Tuple(Forms: (++type_reference >> t, ~_)) ^ t)
+						
 	def getTarget(l, r):
 		return r if l is null
 		return newMemberReference(l, (r as ReferenceExpression).Name)
+	
+	prefix_input = $(prefixInput(input))
+	
+	def prefixInput(input as OMetaInput):
+		return success(input) if input.IsEmpty or not input.Head isa Prefix
+		
+		list = []
+		current = input.Head
+		
+		while current isa Prefix:
+			list.Add((current as Prefix).Operand)
+			current = (current as Prefix).Operator
+		
+		list.Add(current)
+		
+		return success(OMetaInput.For(list.Reversed))
+		
+		
 	
 	member_reference_left = (Infix(Operator: DOT, Left: member_reference >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
 	
 	member_reference = Infix(Operator: DOT, Left: member_reference >> e, Right: id >> name) ^ newMemberReference(e, name) | (reference | invocation | invocation_expression | atom)
 	
 	invocation_arguments = Brackets(
-								Kind: BracketType.Parenthesis,
+								Type: BracketsType.Parenthesis,
 								Form: (
 										(Tuple(Forms: (++(invocation_argument) >> a, ~_) ) ^ a) \
 										| (invocation_argument >> a ^ [a]) \
@@ -447,11 +479,26 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	invocation_argument = named_argument | assignment
 	
 	named_argument = Pair(IsMultiline: _ >> ml and (ml == false), Left: id >> name, Right: assignment >> value) ^ newNamedArgument(name, value)
-	
+
 	optional_invocation_arguments = invocation_arguments | (~~_ ^ null)
 	block = empty_block | (Block(Forms: (++(stmt >> s ^ getStatement(s)) >> a, nothing) ) ^ newBlock(null, null, a, null)) | (stmt >> s ^ newBlock(null, null, s, null))
 	
 	empty_block = Block(Forms: (PASS, ~_)) ^ AST.Block()
+	
+	collection_initialization = here >> i, (prefix_operand[initialization_list_literal] | prefix_operand[hash_literal]) >> init \
+								, invocation_expression >> e \
+								, next[i] ^ newCollectionInitialization(e, init)
+
+	initialization_list_literal = Brackets(
+										Type: BracketsType.Curly,
+										Form: (
+											(Tuple(Forms: (++(expression) >> e, ~_) ) ^ e) \
+											| (expression >> e ^ [e]) \
+											| ((_ >> e and (e == null)) ^ [])
+										) >> items
+									) ^ newListLiteral(items)
+
+	hash_literal = ~""
 	
 	stmt_for = here >> i, prefix[FOR], Pair(Left:
 												Infix(
@@ -500,12 +547,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	type_reference_splice = prefix[SPLICE_BEGIN], atom >> e ^ SpliceTypeReference(Expression: e)
 	
-	type_reference_array = Brackets(Kind: BracketType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
+	type_reference_array = Brackets(Type: BracketsType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
 	
 	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank)
 	
 	type_reference_callable = optional_type >> type, prefix[CALLABLE], \
-								Brackets(Kind: BracketType.Parenthesis,
+								Brackets(Type: BracketsType.Parenthesis,
 									Form: (
 										(type_reference >> params)
 										| (param_array_reference >> paramArray)
@@ -520,13 +567,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	quasi_quote = quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
 	
-	quasi_quote_module = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (--module_member >> members, --stmt >> stmts, ~_))) ^ newQuasiquoteExpression(newModule(null, null, [], members, stmts))
+	quasi_quote_module = Brackets(Type: BracketsType.QQ, Form: Block(Forms: (--module_member >> members, --stmt >> stmts, ~_))) ^ newQuasiquoteExpression(newModule(null, null, [], members, stmts))
 	
-	quasi_quote_member = Brackets(Kind: BracketType.QQ, Form: Block(Forms: (class_member >> e, ~_))) ^ newQuasiquoteExpression(e)
+	quasi_quote_member = Brackets(Type: BracketsType.QQ, Form: Block(Forms: (class_member >> e, ~_))) ^ newQuasiquoteExpression(e)
 	
-	quasi_quote_expression = Brackets(Kind: BracketType.QQ, Form: assignment >> e) ^ newQuasiquoteExpression(e)
+	quasi_quote_expression = Brackets(Type: BracketsType.QQ, Form: assignment >> e) ^ newQuasiquoteExpression(e)
 	
-	quasi_quote_stmt = Brackets(Kind: BracketType.QQ, Form: (qq_return | qq_macro) >> e) ^ newQuasiquoteExpression(e)
+	quasi_quote_stmt = Brackets(Type: BracketsType.QQ, Form: (qq_return | qq_macro) >> e) ^ newQuasiquoteExpression(e)
 	
 	qq_return = (RETURN | Prefix(Operator: RETURN, Operand: assignment >> e)) ^ ReturnStatement(Expression: e, Modifier: null)
 	qq_macro = prefix[id] >> name, optional_assignment_list >> args ^ newMacro(name, args, null, null) 
@@ -535,6 +582,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	prefix[rule] = Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))
 	optional_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | ""
+	
+	prefix_operand[rule] = Prefix(Operator: _ >> newInput, Operand: rule >> e), $(success(newInput, e))
+	optional_prefix_operand[rule] = (Prefix(Operator: _ >> newInput, Operand: rule >> e), $(success(newInput, e))) | ""
 	
 	optional_prefix_or_rule[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | optional[rule]
 	
