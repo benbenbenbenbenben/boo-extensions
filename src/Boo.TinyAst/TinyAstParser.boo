@@ -245,8 +245,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	high_priority_prefix = ( (STAR | (~~DOT, ~atom /*not float, ex: .001*/, DOT)) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
 
-	low_pr_pair = (~in_tuple2, low_pr_pair >> left and (not left isa Infix), (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) | prefix_of_brackets
-
+	low_pr_pair = (~in_tuple2, low_pr_pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) | member_reference
+	
 	prefix_of_brackets = (
 							
 							(prefix_of_brackets >> op and 
