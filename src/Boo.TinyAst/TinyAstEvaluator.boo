@@ -426,7 +426,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	cast_operator = Infix(Operator: CAST, Left: assignment >> e, Right: type_reference >> typeRef)  ^ CastExpression(Target: e, Type: typeRef)
 
 	stmt_declaration = (typed_declaration >> d
-						| Infix(Operator: ASSIGN, Left: typed_declaration >> d, Right: assignment >> e)) ^ newDeclarationStatement(d, e)
+						| Infix(Operator: ASSIGN, Left: typed_declaration >> d, Right: (assignment | block_expression) >> e)) ^ newDeclarationStatement(d, e)
 	
 	typed_declaration = Infix(Operator: AS, Left: Identifier(Name: _ >> name), Right: type_reference >> typeRef) ^ newDeclaration(name, typeRef)
 	
