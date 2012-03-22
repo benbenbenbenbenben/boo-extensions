@@ -294,10 +294,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_block = here >> i, multiline_pair_block >> body, \
 										 closure_block_left >> parameters, next[i] ^ newBlockExpression(null, null, parameters, body)
-	
+
 	invocation_with_block = here >> i, \
-										prefix[invocation] >> e, multiline_pair_block >> body, closure_block_left >> parameters \
-										, next[i] ^ newInvocationWithBlock(e, newBlockExpression(null, null, parameters, body))
+							(
+								(prefix[invocation] >> e, closure_block >> be) 
+								| (multiline_pair_block >> b, invocation >> e)
+							), next[i] ^ newInvocationWithBlock(e, (be if be is not null else newBlockExpression(null, null, [[], null], b)))
+
 	
 	dsl_friendly_invocation = ~_
 

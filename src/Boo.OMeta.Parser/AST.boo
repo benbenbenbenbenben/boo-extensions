@@ -358,6 +358,7 @@ def newConditionalExpression(condition, trueValue, falseValue):
 	return ConditionalExpression(Condition: condition, TrueValue: trueValue, FalseValue: falseValue)
 	
 def newBlockExpression(start as OMetaInput, end as OMetaInput, parameters as List, body):
+	parameters = [[], null] if parameters is null
 	node = BlockExpression(Body: body)
 	for p in parameters[0]:
 		node.Parameters.Add(p)
