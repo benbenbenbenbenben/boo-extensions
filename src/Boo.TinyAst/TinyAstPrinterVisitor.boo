@@ -144,7 +144,7 @@ afterMacroExpansion:
 				Write("'") if node.Value isa string
 				
 			override def OnBrackets(node as Brackets):
-				Write(GetStartBracket(node.Kind))
+				Write(GetStartBracket(node.Type))
 				if node.Form isa Block:
 					Indent()
 					WriteLine()
@@ -158,7 +158,7 @@ afterMacroExpansion:
 				if node.Form isa Block:
 					Dedent()
 					WriteLine()
-				Write(GetEndBracket(node.Kind))
+				Write(GetEndBracket(node.Type))
 
 			override def OnIdentifier(node as Identifier):
 				Write(node.Name)				
@@ -181,26 +181,26 @@ afterMacroExpansion:
 				while i++ < _indent:
 					_writer.Write(_indentText)
 				
-			private def GetStartBracket(kind as BracketType):
+			private def GetStartBracket(kind as BracketsType):
 				match kind:
-					case BracketType.QQ:
+					case BracketsType.QQ:
 						return "[|"
-					case BracketType.Parenthesis:
+					case BracketsType.Parenthesis:
 						return "("
-					case BracketType.Curly:
+					case BracketsType.Curly:
 						return "{"
-					case BracketType.Square:
+					case BracketsType.Square:
 						return "["
 						
-			private def GetEndBracket(kind as BracketType):
+			private def GetEndBracket(kind as BracketsType):
 				match kind:
-					case BracketType.QQ:
+					case BracketsType.QQ:
 						return "|]"
-					case BracketType.Parenthesis:
+					case BracketsType.Parenthesis:
 						return ")"
-					case BracketType.Curly:
+					case BracketsType.Curly:
 						return "}"
-					case BracketType.Square:
+					case BracketsType.Square:
 						return "]"
 
 	|]

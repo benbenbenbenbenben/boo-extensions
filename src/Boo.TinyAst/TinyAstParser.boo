@@ -7,7 +7,7 @@ import Boo.Lang.Compiler
 import Boo.Lang.Compiler.Ast
 import System.Globalization
 
-enum BracketType:
+enum BracketsType:
 	QQ
 	Parenthesis
 	Square
@@ -15,7 +15,7 @@ enum BracketType:
 
 ast Form = \
 	Identifier(Name as string, IsKeyword as bool, IsSymbol as bool) | \
-	Brackets(Form, Kind as BracketType)  |\
+	Brackets(Form, Type as BracketsType)  |\
 	Literal(Value as object, astLiteral as LiteralExpression) |\
 	Infix(Operator as Identifier, Left, Right) |\
 	Prefix(Operator, Operand, IsPostfix as bool) |\
@@ -189,7 +189,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	high_pr_pair = (high_pr_pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) | brakets_prefix
 	
-	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets and ((op as Brackets).Kind == BracketType.Parenthesis or (op as Brackets).Kind == BracketType.Square) )), assignment >> e ^ Prefix(op, e, false)) | assignment
+	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets and ((op as Brackets).Type == BracketsType.Parenthesis or (op as Brackets).Type == BracketsType.Square) )), assignment >> e ^ Prefix(op, e, false)) | assignment
 	
 	assignment = ( or_expression >> l, (ASSIGN | ASSIGN_INPLACE) >> op, ((low_pr_pair >> r and (r isa Pair)) | assignment)  >> r, (--prefix_expression) >> tail ^ Infix(Identifier(tokenValue(op), false, false), l, getRight(r, tail))) \
 					| or_expression
@@ -279,9 +279,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	exp_in_brackets = paren_brackets | qq_brackets | square_brackets | curly_brackets
 
-	paren_brackets = (LPAREN, enter_tuple2, ( form | "" ) >> f, RPAREN, leave_tuple2) ^  Brackets(f, BracketType.Parenthesis)
+	paren_brackets = (LPAREN, enter_tuple2, ( form | "" ) >> f, RPAREN, leave_tuple2) ^  Brackets(f, BracketsType.Parenthesis)
 
-	qq_brackets = ((QQ_BEGIN, INDENT, block >> f, DEDENT, QQ_END) | (QQ_BEGIN, form >> f, QQ_END)) ^ Brackets(f, BracketType.QQ)
+	qq_brackets = ((QQ_BEGIN, INDENT, block >> f, DEDENT, QQ_END) | (QQ_BEGIN, form >> f, QQ_END)) ^ Brackets(f, BracketsType.QQ)
 	
 	square_brackets = (LBRACK
 							,(
@@ -289,9 +289,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 								| (form >> f, RBRACK)
 								| RBRACK
 							)
-					) ^ Brackets(f, BracketType.Square)
+					) ^ Brackets(f, BracketsType.Square)
 	
-	curly_brackets = (LBRACE, ( form | "") >> f, RBRACE) ^ Brackets(f, BracketType.Curly)
+	curly_brackets = (LBRACE, ( form | "") >> f, RBRACE) ^ Brackets(f, BracketsType.Curly)
 	
 	literal = float | integer | string_literal 
 	
