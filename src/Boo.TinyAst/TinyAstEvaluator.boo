@@ -302,8 +302,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 								| (multiline_pair_block >> b, invocation >> e)
 							), next[i] ^ newInvocationWithBlock(e, (be if be is not null else newBlockExpression(null, null, [[], null], b)))
 
-	
-	dsl_friendly_invocation = ~_
+	dsl_friendly_invocation = here >> i, multiline_pair_block >> body, member_reference_left >> mr, reference >> target, next[i]\
+						^ newInvocation(getTarget(mr, target), [BlockExpression(Body: body)], null)
 
 	multiline_pair_block = Pair(IsMultiline: _ >> ml and (ml == true), Right: block >> body, Left: _ >> newInput), $(success(newInput, body))
 
@@ -545,7 +545,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					
 	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
 	
-	stmt_return = here >> i, (RETURN | prefix[RETURN], (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) | block_expression >> e ) ), next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
+	stmt_return = here >> i, (RETURN | (prefix[RETURN], (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) | block_expression >> e ) ) ), next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
 
 	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
 	
