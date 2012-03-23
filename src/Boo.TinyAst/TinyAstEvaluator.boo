@@ -47,6 +47,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		OF = "of"
 		IF = "if"
 		ELSE = "else"
+		ELIF = "elif"
 		NOT = "not"
 		IS = "is"
 		IS_NOT = "is not"
@@ -261,10 +262,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 				, optional_type >> type and (type is not null or initializer is not null) \
 				, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
 				
-//	def getInitializer(initializer, body):
-//		return newBlockExpression(null, null, initializer, body) if body is not null and initializer is not null
-//		return initializer
-
 	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: (assignment | block_expression) >> e), $(success(newInput, e)) )| ""
 	
 	optional_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference >> e), $(success(newInput, e)) )| ""
@@ -526,10 +523,21 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 												
 	rvalue = assignment_list >> items ^ newRValue(items)
 						
-	stmt_if = here >> i, prefix[IF], Pair(Left:
-						assignment >> e,
-					Right: 
-						block >> trueBlock), next[i] ^ newIfStatement(e, trueBlock, null)
+	stmt_if = here >> i, prefix[IF] \
+						, Pair(Left: assignment >> e, Right: block >> trueBlock) \
+						, next[i], false_block >> falseBlock ^ newIfStatement(e, trueBlock, falseBlock)
+
+	false_block = 	(	
+						here >> i 
+						, prefix[ELIF] 
+						, Pair(Left: assignment >> e, Right: block >> trueBlock) 
+						, next[i], false_block >> falseBlock ^ newBlock(null, null, newIfStatement(e, trueBlock, falseBlock), null)
+					) | \
+					(
+						Pair(Left: ELSE, Right: block >> falseBlock) ^ falseBlock						
+					) | \
+					("" ^ null)
+					
 				
 	stmt_while = here >> i, prefix[WHILE], Pair(Left: (assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
 	
