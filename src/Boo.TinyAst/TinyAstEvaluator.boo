@@ -370,8 +370,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	list_literal = Brackets(Type: BracketsType.Square,
 								Form: (
 									Tuple(Forms: ((++assignment >> a, ~_) ^ a) >> items)
+									| (assignment >> a ^ [a]) >> items
+									| ((_ >> e and (e == null)) ^ []) >> items
 								)
-							) ^ newListLiteral(items)
+					) ^ newListLiteral(items)
 
 	boolean = true_literal | false_literal
 	
@@ -520,7 +522,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 													Right: rvalue >> r												
 												),
 											Right:
-												block >> body), next[i] ^ newForStatement(dl, r, body, null, null)
+												block >> body), next[i] \
+									, or_block >> orBlock \
+									, then_block >> thenBlock ^ newForStatement(dl, r, body, orBlock, thenBlock)
 												
 	rvalue = assignment_list >> items ^ newRValue(items)
 						
