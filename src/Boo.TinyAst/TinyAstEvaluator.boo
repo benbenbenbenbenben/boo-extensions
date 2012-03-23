@@ -155,7 +155,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					method_parameters >> parameters, next[i] ^ newCallable(mod, name, null, parameters, type)
 	
 	
-	method = (--attributes_line >> att, inline_attributes >> in_att, member_modifiers >> mod, here >> i, prefix[DEF], method_body >> body, \
+	method = (--attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[DEF], method_body >> body, \
 				 optional_type >> type, method_result_attributes >> ra, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, ra, type, body)
 
 	here = $(success(input, input))
