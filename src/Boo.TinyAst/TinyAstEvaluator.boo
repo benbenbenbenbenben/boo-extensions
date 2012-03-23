@@ -429,8 +429,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	declaration = optional_type >> typeRef, id >> name ^ newDeclaration(name, typeRef)		
 
-	prefix_expression = Prefix(Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
-	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT
+	prefix_expression = Prefix(IsPostfix: _ >> p and (p == false), Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
+	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT | STAR
 	
 	invocation = here >> i, (collection_initialization | invocation_expression) >> e, ~_, next[i] ^ e
 	invocation_expression = here >> i, member_reference_left >> mr, prefix_operand[invocation_arguments] >> args \
