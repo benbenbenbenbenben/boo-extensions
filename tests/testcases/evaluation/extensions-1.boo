@@ -1,9 +1,9 @@
 """
-[Extension]
+[Boo.Lang.ExtensionAttribute]
 static def foo(item as string):
 	return item.ToUpper()
 
-[Extension]
+[Boo.Lang.ExtensionAttribute]
 static def join(item as string, items):
 	return join(items, self)
 """
