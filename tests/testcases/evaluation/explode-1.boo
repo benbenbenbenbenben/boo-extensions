@@ -1,6 +1,6 @@
 """
 def foo(*args):
-	print bar(*args)
+	print(bar(*args))
 
 def bar(*args):
 	return join(args)
