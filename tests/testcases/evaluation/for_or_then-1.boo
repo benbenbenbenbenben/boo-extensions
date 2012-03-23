@@ -4,7 +4,7 @@ for item in []:
 or:
 	x = 1
 then:
-	print 'done'
+	print('done')
 """
 for item in []:
 	pass
