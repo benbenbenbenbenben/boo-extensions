@@ -259,7 +259,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 			)
 	field = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod\
 				, field_initializer >> initializer \
-				, optional_type >> type and (type is not null or initializer is not null) \
+				, optional_type >> type \
 				, id >> name, next[i] ^ newField([att, in_att], mod, name, type, initializer)
 				
 	field_initializer = (Infix(Operator: ASSIGN, Left: _ >> newInput, Right: (assignment | block_expression) >> e), $(success(newInput, e)) )| ""
@@ -272,12 +272,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	qualified_name = (Infix(Operator: DOT, Left: qualified_name >> l, Right: id >> r) ^ ("$l.$r")) | id
 	
-	stmt_line = stmt_declaration \
+	stmt_line = stmt_unpack \
+				| stmt_declaration \
 				| stmt_expression \
 				| stmt_return \
 				| stmt_macro \
-				| stmt_raise \
-				| stmt_unpack
+				| stmt_raise
 	
 	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block | ((block_expression >> e) ^ ExpressionStatement(Expression: e))
 	
@@ -336,12 +336,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	closure_stmt_list = (closure_stmt >> s ^ [s]) | (Block(Forms: ++closure_stmt >> s) ^ s)
 	
-	closure_stmt = closure_stmt_expression \
+	closure_stmt = stmt_unpack \
+					| closure_stmt_expression \
 					| stmt_return \
 					| stmt_raise \
-					| stmt_unpack \
 					| closure_stmt_macro
-	
+
 	closure_stmt_expression = here >> i, (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ), next[i] ^ ExpressionStatement(Expression: e, Modifier: m)
 
 	closure_stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_prefix_or_rule[assignment_list] >> args\
@@ -354,7 +354,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 									Form: ( 
 										Tuple(Forms: (++assignment >> items, ~_) )
 									)
-								) ^ newArrayLiteral(null, items)
+							) \
+							| Tuple(Forms: (++assignment >> items, ~_) ) ^ newArrayLiteral(null, items)
+
 	array_literal_multi_typed = Brackets(
 									Type: BracketsType.Parenthesis, 
 									Form: ( prefix[OF], Pair(Left: type_reference >> type, Right: Tuple(Forms: (++assignment >> items, ~_) ))
