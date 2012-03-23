@@ -380,8 +380,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR \
 					| DIVISION | BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT | GREATER_THAN_EQ | GREATER_THAN \
-					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY | MODULUS
-
+					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY | MODULUS | BITWISE_AND | BITWISE_OR
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: (assignment >> r)) ^ newInfixExpression(op, l, r)
 	
