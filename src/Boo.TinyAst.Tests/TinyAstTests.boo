@@ -118,14 +118,13 @@ a0 as (int,1)
 	[Test]
 	def TinyAstTest1():
 		code = """
-a = [1, 2, 3].Find() do (item as int):
-	return item > 2
+b = [(x, y) for x in range(4) if x % 2 for y in range(5) if y % 2]
 """
 	
 //		booParser = BooParser()
 //		m =  booParser.module(code)
 //		bp = BooParser()
-//		match bp.stmt(code):
+//		match bp.block(code):
 //			case SuccessfulMatch(Value: s)
 //		print s
 
