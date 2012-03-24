@@ -390,20 +390,18 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	reference = id >> r ^ ReferenceExpression(Name: r)
 	
-	assignment = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference | expression
+	assignment =  expression | or_expression
 	
 	expression = generator_expression | conditional_expression | or_expression
 	
-	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)	
+	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)
 	
-	generator_expression_body = here >> i, prefix[FOR], optional_prefix_operand[filter]>> f \
-								, Infix(
-									Operator: IN,
-									Left: declaration_list >> dl,
-									Right: rvalue >> r												
-								), next[i] ^ newGeneratorExpressionBody(dl, r, f)
+	generator_expression_body = prefix[FOR], prefix_or_rule[generator_expression_body_body] >> body	\
+								, optional_prefix_or_rule[filter]>> f ^ newGeneratorExpressionBody((body as List)[0], (body as List)[1], f)
+								
+	generator_expression_body_body = Infix(Operator: IN, Left: declaration_list >> dl, Right: rvalue >> r) ^ [dl, r]
 	
-	filter = prefix[stmt_modifier_type] >> t, or_expression >> e ^ newStatementModifier(t, e)
+	filter = prefix[stmt_modifier_type] >> t, prefix_or_rule[or_expression] >> e ^ newStatementModifier(t, e)
 	
 	conditional_expression = Brackets(
 								Type: BracketsType.Parenthesis,
@@ -417,7 +415,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							) ^ newConditionalExpression(condition, trueValue, falseValue)
 	
 	// or expression is any operator, prefix or atom except infix ASSIGN
-	or_expression = (~Infix(Operator: (ASSIGN | ASSIGN_INPLACE)), assignment)
+	or_expression = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference
 	
 	declaration_list = Tuple(Forms: (--declaration >> l)) | ((declaration >> l ^ [l]) >> l) ^ l
 
