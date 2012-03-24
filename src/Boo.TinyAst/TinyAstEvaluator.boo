@@ -396,14 +396,14 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	generator_expression = here >> i, prefix[assignment] >> projection, ++generator_expression_body >> body, nothing, next[i] ^ newGeneratorExpression(projection, body)	
 	
-	generator_expression_body = here >> i, prefix[FOR], optional_prefix2[filter]>> f \
+	generator_expression_body = here >> i, prefix[FOR], optional_prefix_operand[filter]>> f \
 								, Infix(
 									Operator: IN,
 									Left: declaration_list >> dl,
 									Right: rvalue >> r												
 								), next[i] ^ newGeneratorExpressionBody(dl, r, f)
 	
-	filter = "" #TODO
+	filter = prefix[stmt_modifier_type] >> t, or_expression >> e ^ newStatementModifier(t, e)
 	
 	conditional_expression = Brackets(
 								Type: BracketsType.Parenthesis,
@@ -621,9 +621,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	rule_or_prefix[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | rule
 	
 	optional[rule] = (rule >> e, $(success(input, e))) | ""
-	
-	prefix2[rule] = Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))
-	optional_prefix2[rule] = (Prefix(Operand: rule >> e, Operator: _ >> newInput), $(success(newInput, e))) | ""
 	
 	prefixOrId = id \
 					|(
