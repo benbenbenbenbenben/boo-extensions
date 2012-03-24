@@ -98,6 +98,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		RAISE = "raise"
 		THEN = "then"
 		SPLICE_BEGIN = "$"
+		STRUCT = "struct"
+		CONSTRUCTOR = "constructor"
 
 	expansion = module_member | stmt
 	
@@ -109,22 +111,21 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	type_def = class_def | enum_def | callable_def | interface_def
 	
 	class_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[CLASS], class_body >> body \
-					, prefixOrId >> className, optional_super_types >> superTypes, next[i] ^ newClass([att, in_att], mod, className, null, superTypes, body)
-	
+					, optional_prefix_operand[super_types] >> superTypes, prefix_or_rule[id] >> className, optional[generic_parameters] >> gp, nothing \
+					, next[i] ^ newClass([att, in_att], mod, className, gp, superTypes, body)
+					
 	class_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++class_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
 
 	interface_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[INTERFACE], interface_body >> body \
-					, prefixOrId >> name, optional_super_types >> superTypes, next[i] ^ newInterface([att, in_att], mod, name, null, superTypes, body)
+					, optional_prefix_operand[super_types] >> superTypes, prefixOrId >> name, next[i] ^ newInterface([att, in_att], mod, name, null, superTypes, body)
 
-	
-	optional_super_types = super_types | ""
-	
 	super_types = Brackets(Type: BracketsType.Parenthesis,
 						Form: (
 							(type_reference >> params)						
 							| Tuple(
 									Forms: (++type_reference >> params, ~_)
-							)									
+							)
+							| ((_ >> params and (params is null)) ^ []) >> params
 						)								
 					) ^ (params if params isa List else [params])
 
@@ -175,18 +176,17 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	parameter = --attributes_line >> att, here >> i, inline_attributes >> in_att, optional_type >> type, id >> name, next[i] ^ newParameterDeclaration([att, in_att], name, type)
 	param_array = --attributes_line >> att, inline_attributes >> in_att, optional_array_type >> type, prefix[STAR], id >> name ^ newParameterDeclaration([att, in_att], name, type)
 	
-	
 	optional_array_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference_array >> e), $(success(newInput, e)) ) | ""
 	
 	method_result_attributes = (Prefix(Operator: _ >> newInput, Operand: inline_attributes >> attr and (len(attr) > 0)), $(success(newInput, attr))) | ""
 
-
 	generic_parameters = brackets, optional_prefix[OF], generic_parameter_list >> parameters ^ parameters
 
 	generic_parameter_list = (generic_parameter >> p ^ [p]) \
-							| (Tuple(Forms: ++generic_parameter >> p) ^ p)
+							| (Tuple(Forms: (++generic_parameter >> p, nothing)) ^ p)
 
-	generic_parameter = (prefix_or_rule[id] >> name, optional[generic_parameter_constraints] >> genericParameterConstraints) ^ newGenericParameterDeclaration(name, genericParameterConstraints)
+	generic_parameter = here >> i, (prefix_or_rule[id] >> name, optional[generic_parameter_constraints] >> genericParameterConstraints) \
+						, next[i] ^ newGenericParameterDeclaration(name, genericParameterConstraints)
 	generic_parameter_constraints = parentheses, generic_parameter_constraint_list
 	
 	generic_parameter_constraint_list = (generic_parameter_constraint >> c ^ [c]) | (Tuple(Forms: ++generic_parameter_constraint >> c) ^ c)
