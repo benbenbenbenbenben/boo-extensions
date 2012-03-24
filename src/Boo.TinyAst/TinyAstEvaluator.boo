@@ -155,8 +155,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					method_parameters >> parameters, next[i] ^ newCallable(mod, name, null, parameters, type)
 	
 	
-	method = (--attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[DEF], method_body >> body, \
-				 optional_type >> type, method_result_attributes >> ra, prefix[id] >> name, method_parameters >> parameters), next[i] ^ newGenericMethod([att, in_att], mod, name, null, parameters, ra, type, body)
+	method = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[DEF], method_body >> body \
+				 , optional_type >> type, method_result_attributes >> ra, prefix_operand[method_parameters] >> parameters \
+				 , prefix_or_rule[id] >> name, optional[generic_parameters] >> gp, nothing, next[i] ^ newGenericMethod([att, in_att], mod, name, gp, parameters, ra, type, body)
 
 	here = $(success(input, input))
 	next[i] = $(success((i as OMetaInput).Tail, (i as OMetaInput).Tail))
@@ -178,14 +179,26 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	optional_array_type = (Infix(Operator: AS, Left: _ >> newInput, Right: type_reference_array >> e), $(success(newInput, e)) ) | ""
 	
 	method_result_attributes = (Prefix(Operator: _ >> newInput, Operand: inline_attributes >> attr and (len(attr) > 0)), $(success(newInput, attr))) | ""
+
+
+	generic_parameters = brackets, optional_prefix[OF], generic_parameter_list >> parameters ^ parameters
+
+	generic_parameter_list = (generic_parameter >> p ^ [p]) \
+							| (Tuple(Forms: ++generic_parameter >> p) ^ p)
+
+	generic_parameter = (prefix_or_rule[id] >> name, optional[generic_parameter_constraints] >> genericParameterConstraints) ^ newGenericParameterDeclaration(name, genericParameterConstraints)
+	generic_parameter_constraints = parentheses, generic_parameter_constraint_list
 	
+	generic_parameter_constraint_list = (generic_parameter_constraint >> c ^ [c]) | (Tuple(Forms: ++generic_parameter_constraint >> c) ^ c)
+	
+	generic_parameter_constraint = ( (CLASS | STRUCT | CONSTRUCTOR) >> constraint ^ newGenericParameterConstraint(constraint) ) | type_reference
+
 	assembly_attribute = Brackets(Type: BracketsType.Square,
 									Form: (
 												(
 													(assembly_attribute_first >> a ^ [a])
 													| (	Tuple( Forms: (assembly_attribute_first >> a , ++attribute >> attr, ~_) ) ^ prepend(a, attr) ) 
 												) >> attr
-										
 									) 
 						) ^ attr
 						
@@ -626,6 +639,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					)
 	prefixOrInfix = (Prefix(Operator: _ >> e, Operand: _ >> newInput), $(success(OMetaInput.For([e, newInput]), e))) \
 					| (Infix() >> e, $(success(e, e)))
+					
+	parentheses = Brackets(Type: BracketsType.Parenthesis, Form: _ >> newInput), $(success(newInput))
+	brackets = Brackets(Type: BracketsType.Square, Form: _ >> newInput), $(success(newInput))
 	
 	#endregion
 	
@@ -666,7 +682,7 @@ def success(input, value):
 	return SuccessfulMatch(input, value) if input isa OMetaInput
 	return SuccessfulMatch(OMetaInput.Singleton(input), value)
 
-def success(input as OMetaInput):
+def success(input):
 	return success(input, null)
 	
 def fail(input as OMetaInput, reason as RuleFailure):

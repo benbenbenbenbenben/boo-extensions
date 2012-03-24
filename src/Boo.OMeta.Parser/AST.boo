@@ -205,7 +205,7 @@ def newGenericTypeDefinitionReference(qname, placeholders as List):
 
 
 def newGenericParameterDeclaration(name, constraints):
-	node = GenericParameterDeclaration(Name: tokenValue(name))
+	node = GenericParameterDeclaration(Name: name)
 
 	if constraints is not null:
 		for constraint in constraints:
