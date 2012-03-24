@@ -286,7 +286,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	square_brackets = (LBRACK
 							,(
-								(enter_tuple3, form >> f, RBRACK, leave_tuple3)
+								(enter_tuple2, form >> f, RBRACK, leave_tuple2)
 								| (form >> f, RBRACK)
 								| RBRACK
 							)
