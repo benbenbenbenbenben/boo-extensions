@@ -189,7 +189,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	high_pr_pair = (high_pr_pair >> left, COLON, form >> right ^ Pair(left, right, false, null)) | brakets_prefix
 	
-	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets and ((op as Brackets).Type == BracketsType.Parenthesis or (op as Brackets).Type == BracketsType.Square) )), assignment >> e ^ Prefix(op, e, false)) | assignment
+	brakets_prefix = ( (brakets_prefix >> op and (op isa Brackets and ((op as Brackets).Type == BracketsType.Parenthesis or (op as Brackets).Type == BracketsType.Square) ))
+			, (assignment >> e and (not (e isa Identifier and (e as Identifier).IsKeyword))  ) ^ Prefix(op, e, false)) | assignment
 	
 	assignment = ( or_expression >> l, (ASSIGN | ASSIGN_INPLACE) >> op, ((low_pr_pair >> r and (r isa Pair)) | assignment)  >> r, (--prefix_expression) >> tail ^ Infix(Identifier(tokenValue(op), false, false), l, getRight(r, tail))) \
 					| or_expression
