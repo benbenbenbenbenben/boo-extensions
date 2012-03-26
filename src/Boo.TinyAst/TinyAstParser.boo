@@ -95,8 +95,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		rbrack = "]", leaveWhitespaceAgnosticRegion
 		lbrace = "{", enterWhitespaceAgnosticRegion
 		rbrace = "}", leaveWhitespaceAgnosticRegion
+		
 
-	keywords "and", "as", "cast", "class", "def", "elif", "else", "from", "interface", "import", "if", "in", "namespace", "not", "or", "for", "isa", "is", "return", "raise", "unless", "while"
+	keywords "and", "as", "cast", "class", "def", "elif", "else", "from", "interface", "import", "if", "in", "namespace", "not", "of", "or", "for", "isa" \
+				, "is", "return", "raise", "unless", "while"
 //	keywords "abstract", "and", "as", "callable", "cast", "class", "constructor", "def", "do", "elif", "else", \
 //		"ensure", "enum", "event", "except", "failure", "final", "for", "from", "goto", "if", "import", \
 //		"interface", "internal", "in", "isa", "is", "namespace", "new", "not", "null", "of", "or", "override", \
@@ -167,10 +169,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 
 	//Enforcing tuple2 if prefix starts from non-Keyword Identifier (macro). TODO: Optimization.
 	prefix_expression = (
-							high_pr_pair >> op							
+							high_pr_pair >> op
 							,(
 								(
-									(("" and (op isa Identifier and not (op as Identifier).IsKeyword), enter_tuple2) | reset_tuple2)
+									(("" and (op isa Identifier and (not (op as Identifier).IsKeyword or (op as Identifier).Name == "of")) , enter_tuple2) | reset_tuple2)
 									, ++prefix_expression >> e
 									//, (("" and (op isa Identifier and not (op as Identifier).IsKeyword), leave_tuple2) | "")
 								) 
@@ -194,7 +196,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	assignment = ( or_expression >> l, (ASSIGN | ASSIGN_INPLACE) >> op, ((low_pr_pair >> r and (r isa Pair)) | assignment)  >> r, (--prefix_expression) >> tail ^ Infix(Identifier(tokenValue(op), false, false), l, getRight(r, tail))) \
 					| or_expression
-					
+
+	low_pr_pair = (~in_tuple2, low_pr_pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) | member_reference
 
 	def getRight(r, tail):
 		return r if tail is null or len(tail) == 0
@@ -234,8 +237,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
 	infix exponentiation_expression, EXPONENTIATION, as_operator
 	infixr as_operator, AS, cast_operator
-	
-	infix cast_operator, CAST, postfix_operator
+	infix cast_operator, CAST, of_operator
+	infixr of_operator, OF, postfix_operator
 	
 	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op), false, true), e, true)) | member_reference
 	infix member_reference, DOT, splice
@@ -244,9 +247,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix at_operator, AT, high_priority_prefix
 
 
-	high_priority_prefix = ( (STAR | (~~DOT, ~atom /*not float, ex: .001*/, DOT)) >> op, prefix_of_brackets >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | prefix_of_brackets
+	high_priority_prefix = ( (STAR | (~~DOT, ~atom /*not float, ex: .001*/, DOT)) >> op, tuple >> e ^ Prefix(Identifier(tokenValue(op), false, true), e, false)) | tuple
 
-	low_pr_pair = (~in_tuple2, low_pr_pair >> left, (begin_block_with_doc >> doc | begin_block), block >> right, DEDENT, prepend_eol ^ Pair(left, right, true, doc)) | member_reference
+	tuple = (~in_tuple3, ~in_tuple2, ~no_tuple, (prefix_of_brackets >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) ) | prefix_of_brackets
 	
 	prefix_of_brackets = (
 							
@@ -269,12 +272,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 						 
 	sticky_brackets = paren_brackets | square_brackets
 
-	atom = tuple | atom2
-	
-	atom2 = exp_in_brackets | identifier | literal
-	
-
-	tuple = ~in_tuple3, ~in_tuple2, ~no_tuple, ((atom2 >> head, COMMA, (tuple >> tail | "") ^ newTuple(head, tail)) | atom2)
+	atom = exp_in_brackets | prefix_of_brackets | identifier | literal
 
 	identifier = (ID >> s ^ Identifier(tokenValue(s), false, false)) | (KW >> s ^ Identifier(tokenValue(s), true, false))
 	
@@ -352,7 +350,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		return setTuple2(input, getTuple2(input) + 1)
 
 	def leaveTuple2(input as OMetaInput):
-		return setTuple2(input, getTuple2(input) - 1)
+		return setTuple2(input, getTuple2(input) - 1) if inTuple2(input)
+		return success(input)
 		
 	def resetTuple2(input as OMetaInput):
 		return setTuple2(input, 0)
