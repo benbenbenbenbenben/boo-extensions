@@ -1,5 +1,5 @@
 """
-public class GenericType[of T1, T2](BaseType of T2, SomeInterface):
+public class GenericType[of T1, T2]((BaseType of T2), SomeInterface):
 	pass
 """
 
