@@ -100,6 +100,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		SPLICE_BEGIN = "$"
 		STRUCT = "struct"
 		CONSTRUCTOR = "constructor"
+		TYPEOF = "typeof"
 
 	expansion = module_member | stmt
 	
@@ -113,7 +114,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	class_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[CLASS], class_body >> body \
 					, optional_prefix_operand[super_types] >> superTypes, prefix_or_rule[id] >> className, optional[generic_parameters] >> gp, nothing \
 					, next[i] ^ newClass([att, in_att], mod, className, gp, superTypes, body)
-					
+
 	class_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++class_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
 
 	interface_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[INTERFACE], interface_body >> body \
@@ -328,9 +329,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_unpack = here >> i, prefixOrInfix, Infix(Operator: ASSIGN, Left: declaration_list >> declarations, Right: rvalue >> e), optional[stmt_modifier] >> m, next[i] ^ newUnpackStatement(declarations, e, m)
 	
-	atom = reference | array_literal | list_literal | boolean | literal | parenthesized_expression | quasi_quote | splice_expression | closure
+	atom = reference | array_literal | list_literal | boolean | literal | type_literal | parenthesized_expression | quasi_quote | splice_expression | closure
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
+
+	type_literal = prefix[TYPEOF], parentheses, type_reference >> type ^ newTypeofExpression(type)
+
 	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
 	
 	splice_expression = prefix[SPLICE_BEGIN], atom >> e ^ SpliceExpression(Expression: e)
@@ -445,22 +449,18 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	prefix_expression = Prefix(IsPostfix: _ >> p and (p == false), Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
 	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT | STAR
-	
+
 	invocation = here >> i, (collection_initialization | invocation_expression) >> e, ~_, next[i] ^ e
 	invocation_expression = here >> i, member_reference_left >> mr, prefix_operand[invocation_arguments] >> args \
-								, optional_prefix_operand[generic_arguments] >> generic_args \
-								, (reference | invocation | atom) >> target  \
+								, (
+									(optional_prefix_operand[generic_arguments] >> generic_args, (reference | invocation | atom) >> target) |
+									(infix[OF], reference >> target, (type_reference >> generic_args ^ [generic_args]) >> generic_args)
+								) \
 								, next[i] ^ newInvocation(getTarget(mr, target), args, generic_args)
 	
 	generic_arguments = Brackets(
 							Type: BracketsType.Square, 
-							Form:
-								Prefix(
-									Operator: OF,
-									Operand: (
-										(type_reference_list | ((type_reference >> arg) ^ [arg])) >> arg
-									)
-								)
+							Form: (optional_prefix[OF], (type_reference_list | ((type_reference >> arg) ^ [arg])) >> arg)
 						) ^ arg 
 						
 	type_reference_list = ((type_reference >> t) ^ [t]) \
@@ -580,7 +580,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	assignment_list = Tuple(Forms: (++assignment >> a, ~_)) ^ a | (assignment >> a ^ [a])
 	optional_assignment_list = assignment_list | ""
 	
-	type_reference = type_reference_simple | type_reference_array | type_reference_splice | type_reference_callable
+	type_reference = type_reference_simple \
+					| type_reference_array \
+					| type_reference_splice \
+					| type_reference_callable \
+					| type_reference_generic
 	
 	type_reference_simple = qualified_name >> name ^ SimpleTypeReference(Name: name)
 	
@@ -603,6 +607,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 
 	param_array_reference = here >> i, prefix[STAR], type_reference >> type, next[i] ^ newParameterDeclaration(null, "arg0", type)
+
+	type_reference_generic = (prefix[qualified_name] >> qname, generic_arguments >> args ^ newGenericTypeReference(qname, args)) \
+							| (member_reference_left >> mr, infix[OF], reference >> target, type_reference >> arg ^ newGenericTypeReference(getTarget(mr, target).ToString(), [arg]))
 
 	quasi_quote = quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
 	
@@ -637,8 +644,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					|(
 							Prefix(Operator: id >> e, Operand: _ >> newInput), $(success(newInput, e))
 					)
-	prefixOrInfix = (Prefix(Operator: _ >> e, Operand: _ >> newInput), $(success(OMetaInput.For([e, newInput]), e))) \
+	prefixOrInfix = (Prefix(Operator: _ >> e, Operand: _ >> newInput), $(success(OMetaInput.For([e, newInput]), e)) ) \
 					| (Infix() >> e, $(success(e, e)))
+					
+	infix[operator] = Infix(Operator: operator >> o, Left: _ >> left, Right: _ >> right), $(success(OMetaInput.For([left, right]), o))
 					
 	parentheses = Brackets(Type: BracketsType.Parenthesis, Form: _ >> newInput), $(success(newInput))
 	brackets = Brackets(Type: BracketsType.Square, Form: _ >> newInput), $(success(newInput))
