@@ -237,8 +237,8 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	prefix_symbol ones_complement_expression, ONES_COMPLEMENT, exponentiation_expression
 	infix exponentiation_expression, EXPONENTIATION, as_operator
 	infixr as_operator, AS, cast_operator
-	infix cast_operator, CAST, of_operator
-	infixr of_operator, OF, postfix_operator
+	infix cast_operator, CAST, postfix_operator
+
 	
 	postfix_operator  =  (postfix_operator >> e, (INCREMENT | DECREMENT) >> op ^ Prefix(Identifier(tokenValue(op), false, true), e, true)) | member_reference
 	infix member_reference, DOT, splice
@@ -257,8 +257,10 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 								(
 									#Identifier + Brackets
 									(op isa Identifier and not (op as Identifier).IsKeyword)
-									#Bracket sticks to bracket
+									#Brackets stick to brackets
 									or (op isa Prefix and (op as Prefix).Operand isa Brackets)
+									#Brackets stick to operator of
+									or (op isa Infix and ((op as Infix).Operator as Identifier).Name == "of")
 								)
 							), 	sticky_brackets >> e ^ Prefix(op, e, false)
 						 ) |\
@@ -266,10 +268,13 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 						 	#Keyword + Brackets. Ex: def()
 						 	#Keyword before brackets has lower priority then infix
 						 	#Ex: for (n, a) in zip(names, attributes) =>  for ((n, a) in zip(names, attributes))
+						 	#TODO: remove this. Rewrite closures evaluation.
 							(prefix_of_brackets >> op and (op isa Identifier and (op as Identifier).IsKeyword)), ~(assignment >> io and (io isa Infix)), 
 								sticky_brackets >> e ^ Prefix(op, e, false)
-						 ) | atom
-						 
+						 ) | of_operator
+
+	infixr of_operator, OF, atom
+
 	sticky_brackets = paren_brackets | square_brackets
 
 	atom = exp_in_brackets | prefix_of_brackets | identifier | literal
