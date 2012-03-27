@@ -329,11 +329,32 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_unpack = here >> i, prefixOrInfix, Infix(Operator: ASSIGN, Left: declaration_list >> declarations, Right: rvalue >> e), optional[stmt_modifier] >> m, next[i] ^ newUnpackStatement(declarations, e, m)
 	
-	atom = reference | array_literal | list_literal | boolean | literal | type_literal | parenthesized_expression | quasi_quote | splice_expression | closure
+	atom = reference \
+			| array_literal \
+			| list_literal \
+			| boolean \
+			| literal \
+			| type_literal \
+			| hash_literal \
+			| parenthesized_expression \
+			| quasi_quote \
+			| splice_expression \
+			| closure
 	
 	literal = (Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si) | (Literal() >> l ^ (l as Literal).astLiteral)
 
 	type_literal = prefix[TYPEOF], parentheses, type_reference >> type ^ newTypeofExpression(type)
+
+	hash_literal = Brackets(
+						Type: BracketsType.Curly,
+						Form: optional_expression_pair_list >> items
+					) ^ newHashLiteral(items)
+
+	optional_expression_pair_list = Tuple(Forms: (++expression_pair >> a, ~_)) ^ a \
+									| (expression_pair >> a ^ [a])\
+									| ((_ >> e and (e == null)) ^ [])
+	
+	expression_pair = Pair(IsMultiline: _ >> m and (m == false), Left: assignment >> first, Right: assignment >> second) ^ ExpressionPair(First: first, Second: second)
 
 	integer = Literal(Value: _ >> v and (v isa long)) >> l ^ (l as Literal).astLiteral
 	
@@ -524,8 +545,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 										) >> items
 									) ^ newListLiteral(items)
 
-	hash_literal = ~""
-	
 	stmt_for = here >> i, prefix[FOR], Pair(Left:
 												Infix(
 													Operator: IN,
