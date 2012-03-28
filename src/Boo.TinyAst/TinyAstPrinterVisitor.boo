@@ -71,6 +71,7 @@ afterMacroExpansion:
 						
 
 			override def OnPair(node as Pair):
+				Write("(") if not node.IsMultiline
 				node.Left.Accept(self) if node.Left
 				Write(":")
 				if node.IsMultiline:
@@ -83,6 +84,8 @@ afterMacroExpansion:
 				
 				if node.IsMultiline:
 					Dedent()
+				else:
+					Write(")")
 
 			override def OnTuple(node as Tuple):
 				commaNeeded = false
