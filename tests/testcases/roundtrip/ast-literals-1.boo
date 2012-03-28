@@ -27,7 +27,7 @@ literal = [|
 |]
 literal = [|
 	protected Property:
-		get: return null
+		(get: return null)
 |]
 """
 literal = [|

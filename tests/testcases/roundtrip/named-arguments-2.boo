@@ -1,8 +1,8 @@
 """
 class Customer:
-	[Property(FirstName, Default: '')]
+	[Property(FirstName, (Default: ''))]
 	_fname as string
-c = Customer(FirstName: 'Rodrigo')
+c = Customer((FirstName: 'Rodrigo'))
 """
 class Customer:
 	[Property(FirstName, Default: "")]

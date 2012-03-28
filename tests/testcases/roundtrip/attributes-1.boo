@@ -1,5 +1,5 @@
 """
-[XmlElement('Person', Namespace: 'urn:foo:bar')]
+[XmlElement('Person', (Namespace: 'urn:foo:bar'))]
 class Person:
 	enum Status:
 		[description('Rich People')]
