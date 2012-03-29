@@ -617,6 +617,7 @@ class EvaluationRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Goto is not supported")]
 	def goto_1():
 		runTestCase("goto-1.boo")
 	
