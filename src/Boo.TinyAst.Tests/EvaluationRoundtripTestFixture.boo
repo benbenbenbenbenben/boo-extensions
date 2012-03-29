@@ -629,11 +629,13 @@ class EvaluationRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Hash is not supported")]
 	def hash_1():
 		runTestCase("hash-1.boo")
 	
 
 	[Test]
+	[Ignore("Hash is not supported")]
 	def hash_initializer():
 		runTestCase("hash-initializer.boo")
 	
