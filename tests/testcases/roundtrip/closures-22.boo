@@ -1,9 +1,9 @@
 """
-a = def ():
+a = def `(`):
 	pass
-foo():
+foo`(`):
 	pass
-bar({return})
+bar`({return}`)
 """
 a = def ():
 	pass

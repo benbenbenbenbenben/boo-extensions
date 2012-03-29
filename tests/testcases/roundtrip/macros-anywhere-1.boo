@@ -8,7 +8,7 @@ class Bar:
 	pass
 assert true
 assert false
-Foo()
+Foo`(`)
 """
 macro1 foo
 class Foo:

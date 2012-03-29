@@ -1,14 +1,14 @@
 """
-def foo():
+def foo`(`):
 	return bar:
 		return 42
-def baz():
+def baz`(`):
 	a = bar:
 		return 42
-doc = XmlBuilder()
+doc = XmlBuilder`(`)
 doc . html:
 	doc . body:
-		doc . text('Hello, world!')
+		doc . text`('Hello, world!'`)
 """
 def foo():
 	return bar: // dsl friendly invocation syntax

@@ -1,5 +1,5 @@
 """
-def Method[of T]():
+def Method[of T]`(`):
 	pass
 """
 

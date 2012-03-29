@@ -1,9 +1,9 @@
 """
 class Foo:
 	pass
-def bar():
-	f = Foo()
-bar()
+def bar`(`):
+	f = Foo`(`)
+bar`(`)
 """
 class Foo:
 	pass

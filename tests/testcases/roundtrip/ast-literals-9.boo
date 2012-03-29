@@ -3,8 +3,8 @@ a = [|
 	print 'foo'
 |]
 b = [|
-	(System . Console) . WriteLine('foo')
-	(System . Console) . WriteLine('bar')
+	(System . Console) . WriteLine`('foo'`)
+	(System . Console) . WriteLine`('bar'`)
 |]
 """
 a = [|

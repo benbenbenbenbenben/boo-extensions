@@ -1,8 +1,8 @@
 """
 try:
-	raise (System . Exception('throw'))
+	raise (System . Exception`('throw'`))
 except:
-	Console . WriteLine('catch')
+	Console . WriteLine`('catch'`)
 """
 try:
 	raise System.Exception("throw")

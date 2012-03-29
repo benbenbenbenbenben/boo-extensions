@@ -1,6 +1,6 @@
 """
 myclass Foo:
-	override def ToString():
+	override def ToString`(`):
 		pass
 """
 myclass Foo:

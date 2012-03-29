@@ -1,7 +1,7 @@
 """
 class Customer:
 	_name as string
-	def constructor(name):
+	def constructor`(name`):
 		(self . _name) = name
 	This:
 		get:

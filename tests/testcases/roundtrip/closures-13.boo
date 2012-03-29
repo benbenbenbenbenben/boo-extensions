@@ -1,8 +1,8 @@
 """
-def foo():
-	return ([1, 2, 3] . Find()) do((item as int)):
+def foo`(`):
+	return ([(1, 2, 3)] . Find`(`)) do`((item as int)`):
 		return (item > 2)
-print(foo())
+print`(foo`(`)`)
 """
 def foo():
 	return [1, 2, 3].Find() do (item as int):

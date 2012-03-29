@@ -1,11 +1,11 @@
 """
 interface IFoo:
 	pass
-interface IBar(IFoo):
+interface IBar`(IFoo`):
 	pass
-class Person(IFoo):
+class Person`(IFoo`):
 	pass
-class Customer(Person, IBar, IFoo):
+class Customer`((Person, IBar, IFoo)`):
 	pass
 """
 interface IFoo:

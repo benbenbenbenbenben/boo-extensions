@@ -1,5 +1,5 @@
 """
-public struct GenericType[of T](BaseType, SomeInterface):
+public struct GenericType[of T]`((BaseType, SomeInterface)`):
 	pass
 """
 

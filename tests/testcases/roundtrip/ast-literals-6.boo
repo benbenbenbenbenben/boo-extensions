@@ -1,9 +1,9 @@
 """
-def foo():
+def foo`(`):
 	return [|
 		return 3
 	|]
-def bar():
+def bar`(`):
 	return [|print 'Hello, world'|]
 """
 def foo():

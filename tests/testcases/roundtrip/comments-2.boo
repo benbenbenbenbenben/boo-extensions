@@ -2,9 +2,9 @@
 class Test:
 	a as int
 	b as int
-	def method1():
+	def method1`(`):
 		a = 1
-	def method2():
+	def method2`(`):
 		pass
 """
 class Test:

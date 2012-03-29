@@ -1,10 +1,10 @@
 """
 class Foo:
-	new def Bar():
+	new def Bar`(`):
 		pass
-	public new def Bar():
+	public new def Bar`(`):
 		pass
-	new public def Bar():
+	new public def Bar`(`):
 		pass
 """
 class Foo:

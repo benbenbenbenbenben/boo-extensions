@@ -1,7 +1,7 @@
 """
 class Foo:
-	spam = def (msg):
-		print(msg)
+	spam = def `(msg`):
+		print`(msg`)
 	(eggs as string) = 'foo'
 """
 class Foo:

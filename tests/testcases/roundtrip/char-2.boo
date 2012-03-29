@@ -1,6 +1,6 @@
 """ 
 match foo:
-	case char():
+	case char`(`):
 		print
 """ 
 match foo:

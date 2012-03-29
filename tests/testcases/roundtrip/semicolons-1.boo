@@ -2,10 +2,10 @@
 namespace Foo.Bar
 
 import System
-def foo():
-	print('bar')
-foo()
-foo()
+def foo`(`):
+	print`('bar'`)
+foo`(`)
+foo`(`)
 """
 namespace Foo.Bar;
 ;

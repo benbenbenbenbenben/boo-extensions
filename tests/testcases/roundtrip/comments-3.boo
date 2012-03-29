@@ -1,5 +1,5 @@
 """
-print(('foo' + 'bar'))
+print`(('foo' + 'bar')`)
 """
 /*
 	a multiline

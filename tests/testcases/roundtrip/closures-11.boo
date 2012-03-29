@@ -1,7 +1,7 @@
 """
 class Foo:
-	bar = def (msg):
-		print(msg)
+	bar = def `(msg`):
+		print`(msg`)
 """
 class Foo:
 	bar = def (msg):

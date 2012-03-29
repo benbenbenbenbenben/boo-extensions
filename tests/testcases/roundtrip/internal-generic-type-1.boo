@@ -1,5 +1,5 @@
 """
-public class GenericType[of T](BaseType, SomeInterface):
+public class GenericType[of T]`((BaseType, SomeInterface)`):
 	pass
 """
 
