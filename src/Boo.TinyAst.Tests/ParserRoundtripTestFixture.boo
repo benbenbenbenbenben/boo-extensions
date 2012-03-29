@@ -622,11 +622,15 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Hash is not supported")]
+	#There is conflict because curly brakets are also used in closures so it's not possible to determine correct priority of tuple for both cases
 	def hash_1():
 		runTestCase("hash-1.boo")
 	
 
 	[Test]
+	[Ignore("Hash is not supported")]
+	#There is conflict because curly brakets are also used in closures so it's not possible to determine correct priority of tuple for both cases
 	def hash_initializer():
 		runTestCase("hash-initializer.boo")
 	
