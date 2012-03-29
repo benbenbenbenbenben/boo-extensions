@@ -88,6 +88,7 @@ afterMacroExpansion:
 					Write(")")
 
 			override def OnTuple(node as Tuple):
+				Write("(")
 				commaNeeded = false
 				
 				if node.Forms:
@@ -101,7 +102,7 @@ afterMacroExpansion:
 						commaNeeded = true
 				
 				Write(",") if len(node.Forms) == 1 
-
+				Write(")")
 			override def OnPrefix(node as Prefix):
 				if node.IsPostfix:
 					node.Operand.Accept(self)
@@ -189,7 +190,7 @@ afterMacroExpansion:
 					case BracketsType.QQ:
 						return "[|"
 					case BracketsType.Parenthesis:
-						return "("
+						return "`("
 					case BracketsType.Curly:
 						return "{"
 					case BracketsType.Square:
@@ -200,7 +201,7 @@ afterMacroExpansion:
 					case BracketsType.QQ:
 						return "|]"
 					case BracketsType.Parenthesis:
-						return ")"
+						return "`)"
 					case BracketsType.Curly:
 						return "}"
 					case BracketsType.Square:
