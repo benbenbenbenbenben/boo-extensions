@@ -117,26 +117,27 @@ a0 as (int,1)
 	
 	[Test]
 	def TinyAstTest1():
-		code = """
-b = [(x, y) for x in range(4) if x % 2 for y in range(5) if y % 2]
-"""
+		code = """c = {
+		a : b,
+		"spam" : "e" + "g" + "g" + "s"
+	}"""
 	
-//		booParser = BooParser()
-//		m =  booParser.module(code)
+		booParser = BooParser()
+		m =  booParser.module(code)
 //		bp = BooParser()
 //		match bp.block(code):
 //			case SuccessfulMatch(Value: s)
 //		print s
 
 		parser = TinyAstParser()
-		match parser.block(code):
+		match parser.form(code):
 			case SuccessfulMatch(Value: o, Input /* = Boo.TinyAst.Block()*/)
 
 		cp = Boo.Lang.Compiler.CompilerParameters()
 		cp.References.Add(typeof(BooParser).Assembly)
 		evaluator = TinyAstEvaluator(cp)
-		b = evaluator.expansion(OMetaInput.For((o as Boo.TinyAst.Block).Forms))
-		
+		//b = evaluator.expansion(OMetaInput.For((o as Boo.TinyAst.Block).Forms))
+		b = evaluator.expansion(OMetaInput.Singleton(o))
 		print b
 
 	def normalize(s as string):
