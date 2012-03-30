@@ -651,6 +651,7 @@ class EvaluationRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Ignoring because test tries to find assembly 'foo-bar'")]
 	def import_2():
 		runTestCase("import-2.boo")
 	
