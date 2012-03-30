@@ -879,12 +879,13 @@ class ParserRoundtripTestFixture:
 	
 
 	[Test]
-	[Ignore("Slicing is not fully supported")]
+	[Ignore("Slicing is not supported")]
 	def slicing_1():
 		runTestCase("slicing-1.boo")
 	
 
 	[Test]
+	[Ignore("Slicing is not supported")]	
 	def slicing_2():
 		runTestCase("slicing-2.boo")
 	
