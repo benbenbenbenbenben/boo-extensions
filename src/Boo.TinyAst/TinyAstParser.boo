@@ -164,7 +164,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	
 	inline_block = (inline_block >> t, SEMICOLON, prefix_expression >> last ^ newBlock(t, last)) | prefix_expression
 	
-	//Enforcing tuple if prefix starts from non-Keyword Identifier (macro). TODO: Optimization.
 	prefix_expression = (
 							(tuple | brakets_prefix) >> op
 							,(

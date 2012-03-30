@@ -153,8 +153,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	enum_field = --attributes_line >> att, here >> i, inline_attributes >> in_att, \
 					(Infix(Operator:ASSIGN, Left: id >> name, Right: assignment >> e) | id >> name), next[i] ^ newEnumField([att, in_att], name, e)
 	
-	callable_def = here >> i, member_modifiers >> mod, prefix[CALLABLE], optional_type >> type, prefix[id] >> name, \
-					method_parameters >> parameters, next[i] ^ newCallable(mod, name, null, parameters, type)
+	callable_def = here >> i, member_modifiers >> mod, prefix[CALLABLE], optional_type >> type, prefix_operand[method_parameters] >> parameters \
+				 , prefix_or_rule[id] >> name, optional[generic_parameters] >> gp, nothing, next[i] ^ newCallable(mod, name, gp, parameters, type)
 	
 	
 	method = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[DEF], method_body >> body \
