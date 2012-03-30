@@ -607,13 +607,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	type_reference_simple = qualified_name >> name ^ SimpleTypeReference(Name: name)
 	
-	type_reference_splice = prefix[SPLICE_BEGIN], atom >> e ^ SpliceTypeReference(Expression: e)
+	type_reference_splice = here >> i, prefix[SPLICE_BEGIN], atom >> e, next[i] ^ SpliceTypeReference(Expression: e)
 	
 	type_reference_array = Brackets(Type: BracketsType.Parenthesis, Form: ranked_type_reference >> tr)  ^ tr
 	
 	ranked_type_reference = (type_reference >> type) | Tuple(Forms: (type_reference >> type, integer >> rank)) ^ ArrayTypeReference(ElementType: type, Rank: rank)
 	
-	type_reference_callable = optional_type >> type, prefix[CALLABLE], \
+	type_reference_callable = here >> i, optional_type >> type, prefix[CALLABLE], \
 								Brackets(Type: BracketsType.Parenthesis,
 									Form: (
 										(type_reference >> params)
@@ -622,13 +622,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 												Forms: (++type_reference >> params, (param_array_reference|"") >> paramArray, ~_)
 											)									
 									)								
-								) ^ newCallableTypeReference((params if (params isa List) else [params]), paramArray, type)
+								), next[i] ^ newCallableTypeReference((params if (params isa List) else [params]), paramArray, type)
 
 
 	param_array_reference = here >> i, prefix[STAR], type_reference >> type, next[i] ^ newParameterDeclaration(null, "arg0", type)
 
-	type_reference_generic = (prefix[qualified_name] >> qname, generic_arguments >> args ^ newGenericTypeReference(qname, args)) \
-							| (member_reference_left >> mr, infix[OF], reference >> target, type_reference >> arg ^ newGenericTypeReference(getTarget(mr, target).ToString(), [arg]))
+	type_reference_generic = (here >> i, prefix[qualified_name] >> qname, generic_arguments >> args, next[i] ^ newGenericTypeReference(qname, args)) \
+							| (here >> i, member_reference_left >> mr, infix[OF], reference >> target, type_reference >> arg, next[i] ^ newGenericTypeReference(getTarget(mr, target).ToString(), [arg]))
 
 	quasi_quote = quasi_quote_member | quasi_quote_module | quasi_quote_expression | quasi_quote_stmt
 	
