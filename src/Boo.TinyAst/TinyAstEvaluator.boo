@@ -109,13 +109,20 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	module_member = assembly_attribute | type_def | method
 	type_member_stmt = (type_def | method) >> tm ^ TypeMemberStatement(TypeMember: tm)
 
-	type_def = class_def | enum_def | callable_def | interface_def
+	type_def = class_def | struct_def | interface_def | enum_def | callable_def
 	
 	class_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[CLASS], class_body >> body \
 					, optional_prefix_operand[super_types] >> superTypes, prefix_or_rule[id] >> className, optional[generic_parameters] >> gp, nothing \
 					, next[i] ^ newClass([att, in_att], mod, className, gp, superTypes, body)
 
+	struct_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[STRUCT], struct_body >> body \
+					, optional_prefix_operand[super_types] >> superTypes, prefix_or_rule[id] >> structName, optional[generic_parameters] >> gp, nothing \
+					, next[i] ^ newStruct([att, in_att], mod, structName, gp, superTypes, body)
+
+
+
 	class_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++class_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
+	struct_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++struct_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
 
 	interface_def = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[INTERFACE], interface_body >> body \
 					, optional_prefix_operand[super_types] >> superTypes, prefixOrId >> name, next[i] ^ newInterface([att, in_att], mod, name, null, superTypes, body)
@@ -133,11 +140,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	interface_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++interface_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
 	
 	interface_member = property_def | method_signature
-	method_signature = "" #TODO
+	method_signature = ~"" #TODO
 
 	nothing = ~_
 
 	class_member = type_def | method | property_def | field | event_def  | enum_def
+	
+	struct_member = constructor_method | method | field 
 	
 	enum_def = --attributes_line >> att, here >> i, prefix[ENUM], enum_body >> body, inline_attributes >> in_att, member_modifiers >> mod \
 					, id >> name, next[i] ^ newEnum([att, in_att], mod, name, body)
@@ -160,6 +169,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	method = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[DEF], method_body >> body \
 				 , optional_type >> type, method_result_attributes >> ra, prefix_operand[method_parameters] >> parameters \
 				 , prefix_or_rule[id] >> name, optional[generic_parameters] >> gp, nothing, next[i] ^ newGenericMethod([att, in_att], mod, name, gp, parameters, ra, type, body)
+
+	constructor_method = ~""
 
 	here = $(success(input, input))
 	next[i] = $(success((i as OMetaInput).Tail, (i as OMetaInput).Tail))
