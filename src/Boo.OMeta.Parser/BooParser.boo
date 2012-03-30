@@ -173,7 +173,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		attributes >> attrs,
 		member_modifiers >> mod,
 		STRUCT, ID >> structName, optional_generic_parameters >> genericParameters, super_types >> superTypes, begin_block, struct_body >> body, end_block
-	) ^ newStruct(attrs, mod, structName, genericParameters, superTypes, body)
+	) ^ newStruct(attrs, mod, tokenValue(structName), genericParameters, superTypes, body)
 
 
 	interface_def = (

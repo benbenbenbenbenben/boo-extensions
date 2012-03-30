@@ -264,7 +264,7 @@ def newClass(attributes, modifiers, name, genericParameters, baseTypes, members)
 	return setUpType(ClassDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 def newStruct(attributes, modifiers, name, genericParameters, baseTypes, members):
-	return setUpType(StructDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
+	return setUpType(StructDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 	
 def setUpType(type as TypeDefinition, attributes, modifiers, genericParameters, baseTypes, members):
