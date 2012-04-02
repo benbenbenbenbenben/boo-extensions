@@ -5,11 +5,10 @@ class Foo:
 class Bar:
 	pass
 
-macro1 foo
-macro2 bar:
-	a as int
-assert true
-assert false
+macro1(foo)
+macro2(bar, { a as int })
+assert(true)
+assert(false)
 Foo()
 """
 macro1 foo
