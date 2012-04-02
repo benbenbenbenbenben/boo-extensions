@@ -587,10 +587,22 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
 	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
 
-	stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_macro_body >> b, optional_prefix_operand[stmt_modifier] >> mod, optional[assignment_list] >> args \
+	stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_macro_block >> b, optional_prefix_operand[stmt_modifier] >> mod, optional[assignment_list] >> args \
 					, next[i] ^ newMacro(name, args, b, mod)
 
-	optional_macro_body = (	Pair(Left: _ >> newInput, Right: block >> body), $(success(newInput, body))	) | ""
+	optional_macro_block = ( 
+								Pair(
+									Doc: _ >> doc,
+									Left: _ >> newInput, 
+									Right: (
+											empty_block 
+											| (multi_line_macro_block >> stmts ^ newBlock(null, null, stmts, doc))
+									) >> body
+								)
+								, $(success(newInput, body))	
+							) | ""
+							
+	multi_line_macro_block = Block(Forms: ++(type_member_stmt | stmt ) >> s ) ^ s
 
 	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
 	
