@@ -49,6 +49,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		ELSE = "else"
 		ELIF = "elif"
 		NOT = "not"
+		ISA = "isa"
 		IS = "is"
 		IS_NOT = "is not"
 		increment = "++"
@@ -254,8 +255,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							| (Prefix(Operator: attributes_group >> l, Operand: (~inline_attributes_prescan, _ >> newInput)), $(success(newInput, l)) )\
 							| attributes_group
 
-
-
 	attributes_line =  Prefix(Operator: attributes_group >> l, Operand: attributes_line >> r) ^ prepend(l, r) | (attributes_group >> a ^ a)
 	attributes_group = Brackets(Type:BracketsType.Square, Form: attribute_list >> attrs) ^ attrs
 	
@@ -305,7 +304,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block | ((block_expression >> e) ^ ExpressionStatement(Expression: e))
 	
-	//stmt_expression_block = invocation_with_block_assignment | closure_block_assignment | dsl_friendly_invocation_assignment
 	stmt_expression_block = Infix(
 												Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
 												Left: expression >> l,
@@ -332,8 +330,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		
 	closure_block_left = ((prefix[DEF] | prefix[DO]), method_parameters >> parameters) ^ parameters \
 						| ( (DEF | DO) ^ [[], null])
-						
-
 	
 	stmt_block = stmt_if | stmt_for | stmt_while
 	
@@ -448,7 +444,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 								, optional_prefix_or_rule[filter]>> f ^ newGeneratorExpressionBody((body as List)[0], (body as List)[1], f)
 								
 	generator_expression_body_body = Infix(Operator: IN, Left: declaration_list >> dl, Right: rvalue >> r) ^ [dl, r]
-	
+
+	declaration_list = Tuple(Forms: (--declaration >> l)) | ((declaration >> l ^ [l]) >> l) ^ l
+
 	filter = prefix[stmt_modifier_type] >> t, prefix_or_rule[or_expression] >> e ^ newStatementModifier(t, e)
 	
 	conditional_expression = Brackets(
@@ -463,9 +461,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							) ^ newConditionalExpression(condition, trueValue, falseValue)
 	
 	// or expression is any operator, prefix or atom except infix ASSIGN
-	or_expression = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference
+	or_expression = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference | isa_expression
 	
-	declaration_list = Tuple(Forms: (--declaration >> l)) | ((declaration >> l ^ [l]) >> l) ^ l
+	isa_expression = Infix(Operator: ISA >> op, Left: assignment >> e, Right: type_reference >> type) ^ newInfixExpression(op, e, newTypeofExpression(type))
 
 	try_cast = Infix(Operator: AS, Left: assignment >> e, Right: type_reference >> typeRef)  ^ TryCastExpression(Target: e, Type: typeRef)
 	
@@ -516,8 +514,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		list.Add(current)
 		
 		return success(OMetaInput.For(list.Reversed))
-		
-		
 	
 	member_reference_left = (Infix(Operator: DOT, Left: member_reference >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
 	
@@ -531,7 +527,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 										| ((_ >> a and (a == null)) ^ [])
 								) >> args
 							) ^ args
-
 	
 	invocation_argument = named_argument | assignment
 	
@@ -582,7 +577,6 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 						Pair(Left: ELSE, Right: block >> falseBlock) ^ falseBlock						
 					) | \
 					("" ^ null)
-					
 				
 	stmt_while = here >> i, prefix[WHILE], Pair(Left: (assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
 	
