@@ -56,6 +56,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		decrement = "--"
 		plus = "+"
 		minus = "-"
+		ones_complement = "~"
 		star = "*"
 		division = "/"
 		modulus = "%"
@@ -483,7 +484,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	declaration = optional_type >> typeRef, id >> name ^ newDeclaration(name, typeRef)		
 
 	prefix_expression = Prefix(IsPostfix: _ >> p and (p == false), Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
-	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT | STAR
+	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT | STAR | ONES_COMPLEMENT
 
 	invocation = here >> i, (collection_initialization | invocation_expression) >> e, ~_, next[i] ^ e
 	invocation_expression = here >> i, member_reference_left >> mr, prefix_operand[invocation_arguments] >> args \
@@ -612,7 +613,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
 	
-	stmt_return = here >> i, (RETURN | (prefix[RETURN], (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) | block_expression >> e ) ) ), next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
+	stmt_return = here >> i, prefix_or_rule[RETURN], ( (optional_rule_or_prefix[assignment] >> e, optional[stmt_modifier] >> m, nothing) | optional[block_expression] >> e )\
+					, next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
 
 	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
 	
@@ -676,6 +678,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	optional_prefix_operand[rule] = (Prefix(Operator: _ >> newInput, Operand: rule >> e), $(success(newInput, e))) | ""
 	
 	optional_prefix_or_rule[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | optional[rule]
+	
+	optional_rule_or_prefix[rule] = rule | (Prefix(Operator: (rule >> e), Operand: _ >> newInput), $(success(newInput, e))) | ""
 	
 	prefix_or_rule[rule] = (Prefix(Operator: rule >> e, Operand: _ >> newInput), $(success(newInput, e))) | rule
 	
