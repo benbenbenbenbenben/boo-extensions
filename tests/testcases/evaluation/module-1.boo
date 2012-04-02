@@ -1,6 +1,8 @@
 """
 namespace Math
 
+import Math
+
 def sqrt(x) as single:
 	pass
 

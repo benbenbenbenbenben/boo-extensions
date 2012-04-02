@@ -1,6 +1,8 @@
 """
 namespace Math
 
+import Math
+
 def square(x as int) as int:
 	return (x * x)
 
