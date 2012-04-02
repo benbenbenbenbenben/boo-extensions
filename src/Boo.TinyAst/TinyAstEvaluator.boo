@@ -306,7 +306,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 				| stmt_macro \
 				| stmt_raise
 	
-	stmt_expression = assignment >> a ^ ExpressionStatement(a as Expression) | stmt_expression_block | ((block_expression >> e) ^ ExpressionStatement(Expression: e))
+	stmt_expression = (here >> i, optional_prefix_operand[stmt_modifier] >> mod, assignment >> a, next[i] ^ ExpressionStatement(Expression: a, Modifier: mod)) \
+						| stmt_expression_block \
+						| ((block_expression >> e) ^ ExpressionStatement(Expression: e))
 	
 	stmt_expression_block = Infix(
 												Operator: (ASSIGN | ASSIGN_INPLACE) >> op,
@@ -519,9 +521,13 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		
 		return success(OMetaInput.For(list.Reversed))
 	
-	member_reference_left = (Infix(Operator: DOT, Left: member_reference >> e, Right: _ >> newInput), $(success(newInput, e))) | ""
+	member_reference_left = (Infix(Operator: DOT, Left: member_reference >> e, Right: _ >> newInput), $(success(newInput, e))) \
+							| (Prefix(Operator: DOT, Operand: _ >> newInput), $(success(newInput, OmittedExpression())) ) \
+							| ""
 	
-	member_reference = Infix(Operator: DOT, Left: member_reference >> e, Right: id >> name) ^ newMemberReference(e, name) | (reference | invocation | invocation_expression | atom)
+	member_reference = (Infix(Operator: DOT, Left: member_reference >> e, Right: id >> name) ^ newMemberReference(e, name)) \
+						| (Prefix(Operator: DOT, Operand: id >> name) ^ newMemberReference(OmittedExpression(), name)) \
+						| (reference | invocation | invocation_expression | atom)
 	
 	invocation_arguments = Brackets(
 								Type: BracketsType.Parenthesis,
