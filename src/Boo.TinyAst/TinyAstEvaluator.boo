@@ -140,7 +140,11 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	interface_body = Pair(Left: _ >> newInput, Right: (empty_block | Block(Forms: ( ++interface_member >> body, nothing) ) ^ body) ), $(success(newInput, body)) 
 	
 	interface_member = property_def | method_signature
-	method_signature = ~"" #TODO
+	
+	method_signature = --attributes_line >> att, here >> i, inline_attributes >> in_att, member_modifiers >> mod, prefix[DEF] \
+				 , optional_type >> type, method_result_attributes >> ra, prefix_operand[method_parameters] >> parameters \
+				 , prefix_or_rule[id] >> name, optional[generic_parameters] >> gp, nothing, next[i] \
+				 ^ newGenericMethod([att, in_att], mod, name, gp, parameters, ra, type, null)
 
 	nothing = ~_
 
