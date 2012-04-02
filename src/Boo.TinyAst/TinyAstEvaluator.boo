@@ -393,7 +393,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	closure_stmt_expression = here >> i, (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) ), next[i] ^ ExpressionStatement(Expression: e, Modifier: m)
 
 	closure_stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_prefix_or_rule[assignment_list] >> args\
-						, optional_prefix_or_rule[stmt_modifier] >> mod, next[i] ^ newMacro(name, args, null, mod)
+						, optional[stmt_modifier] >> mod, next[i] ^ newMacro(name, args, null, mod)
 
 	array_literal = array_literal_multi | array_literal_multi_typed
 	
@@ -586,14 +586,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
 	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
-	
-	stmt_macro = macro_id >> name |\
-					Pair(Left: macro_id >> name, Right: block >> b) | \
-					Prefix(
-						Operator: macro_id >> name, 
-						Operand: (assignment_list >> args, ~_) | Pair(Left: assignment_list >> args, Right: block >> b)					
-					) ^ newMacro(name, args, b, null)
-					
+
+	stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_macro_body >> b, optional_prefix_operand[stmt_modifier] >> mod, optional[assignment_list] >> args \
+					, next[i] ^ newMacro(name, args, b, mod)
+
+	optional_macro_body = (	Pair(Left: _ >> newInput, Right: block >> body), $(success(newInput, body))	) | ""
+
 	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
 	
 	stmt_return = here >> i, (RETURN | (prefix[RETURN], (assignment >> e | (prefix[assignment] >> e, stmt_modifier >> m) | block_expression >> e ) ) ), next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
