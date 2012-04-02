@@ -1,6 +1,5 @@
 """
-macro foo:
-	print
+macro(foo, { print })
 """
 macro foo:
 """some documentation"""
