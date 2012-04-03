@@ -893,6 +893,7 @@ class EvaluationRoundtripTestFixture:
 	
 
 	[Test]
+	[Ignore("Slicing is not fully supported")]	
 	def slicing_2():
 		runTestCase("slicing-2.boo")
 	
