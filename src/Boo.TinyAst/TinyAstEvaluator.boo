@@ -62,7 +62,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		modulus = "%"
 		semicolon = ";"
 		bitwise_and = "&"
-		bitwise_or = "|"		
+		bitwise_or = "|"
+		xor = "^"
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		bitwise_shift_left = "<<"
 		bitwise_shift_right = ">>"
@@ -440,7 +441,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	binary_operator = OR | AND | ASSIGN_INPLACE | ASSIGN | IN | NOT_IN | IS | IS_NOT | PLUS | MINUS | STAR \
 					| DIVISION | BITWISE_SHIFT_LEFT | BITWISE_SHIFT_RIGHT | GREATER_THAN_EQ | GREATER_THAN \
-					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY | MODULUS | BITWISE_AND | BITWISE_OR
+					| LESS_THAN_EQ | LESS_THAN | EQUALITY | INEQUALITY | MODULUS | BITWISE_AND | BITWISE_OR \
+					| XOR
 	
 	binary_expression = Infix(Operator: binary_operator >> op, Left: assignment >> l, Right: (assignment >> r)) ^ newInfixExpression(op, l, r)
 	
@@ -473,7 +475,15 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							) ^ newConditionalExpression(condition, trueValue, falseValue)
 	
 	// or expression is any operator, prefix or atom except infix ASSIGN
-	or_expression = binary_expression | try_cast | cast_operator | prefix_expression | invocation | atom | member_reference | isa_expression
+	or_expression = binary_expression \
+					| try_cast \
+					| cast_operator \
+					| prefix_expression \
+					| suffix_expression \
+					| invocation \
+					| atom \
+					| member_reference \
+					| isa_expression
 	
 	isa_expression = Infix(Operator: ISA >> op, Left: assignment >> e, Right: type_reference >> type) ^ newInfixExpression(op, e, newTypeofExpression(type))
 
@@ -490,6 +500,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 
 	prefix_expression = Prefix(IsPostfix: _ >> p and (p == false), Operator: prefix_operator >> op, Operand: assignment >> e) ^ newPrefixExpression(op, e)
 	prefix_operator = NOT | MINUS | INCREMENT | DECREMENT | STAR | ONES_COMPLEMENT
+
+	suffix_expression = Prefix(IsPostfix: _ >> p and (p == true), Operator: suffix_operator >> op, Operand: assignment >> e) ^ addSuffixUnaryOperator(e, op)
+	suffix_operator = INCREMENT | DECREMENT
 
 	invocation = here >> i, (collection_initialization | invocation_expression) >> e, ~_, next[i] ^ e
 	invocation_expression = here >> i, member_reference_left >> mr, prefix_operand[invocation_arguments] >> args \
@@ -634,7 +647,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 							
 	multi_line_macro_block = Block(Forms: ++(type_member_stmt | stmt ) >> s ) ^ s
 
-	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false)) ^ name
+	macro_id = Identifier(Name: _ >> name, IsKeyword: _ >> k and (k == false), IsSymbol: _ >> s and (s == false)) ^ name
 	
 	stmt_return = here >> i, prefix_or_rule[RETURN], ( (optional_rule_or_prefix[assignment] >> e, optional[stmt_modifier] >> m, nothing) | optional[block_expression] >> e )\
 					, next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
