@@ -373,9 +373,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	
 	splice_expression = prefix[SPLICE_BEGIN], atom >> e ^ SpliceExpression(Expression: e)
 	
-	string_interpolation = Literal(Value: _ >> f and (f isa string), Value: booparser_string_interpolation >> si) ^ si
-	
-	booparser_string_interpolation = $(callExternalParser("string_interpolation_items", "Boo.OMeta.Parser.BooParser", input)) >> items ^ newStringInterpolation(items)
+	booparser_string_interpolation = $(callExternalParser("string_interpolation", "Boo.OMeta.Parser.BooParser", input)) \
+									| $(callExternalParser("string_literal", "Boo.OMeta.Parser.BooParser", input))
 	
 	closure	= Brackets( 
 						Type: BracketsType.Curly,
@@ -595,7 +594,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
 
 	stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_macro_block >> b, optional_prefix_operand[stmt_modifier] >> mod, optional[assignment_list] >> args \
-					, next[i] ^ newMacro(name, args, b, mod)
+					, nothing, next[i] ^ newMacro(name, args, b, mod)
 
 	optional_macro_block = ( 
 								Pair(
@@ -731,8 +730,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 			sm.Input.SetMemo("indentStack", indentStack)
 			sm.Input.SetMemo("indentLevel", indentLevel)
 			return sm
-			
-		return result
+
+		return FailedMatch(input, RuleFailure(id, PredicateFailure(parser)))
 
 def success(input, value):
 	return SuccessfulMatch(input, value) if input isa OMetaInput
