@@ -103,6 +103,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		STRUCT = "struct"
 		CONSTRUCTOR = "constructor"
 		TYPEOF = "typeof"
+		TRY = "try"
+		EXCEPT = "except"
+		FAILURE = "failure"
+		ENSURE = "ensure"
 
 	expansion = module_member | stmt
 	
@@ -304,8 +308,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 				| stmt_declaration \
 				| stmt_expression \
 				| stmt_return \
+				| stmt_try \
 				| stmt_macro \
 				| stmt_raise
+
 	
 	stmt_expression = (here >> i, optional_prefix_operand[stmt_modifier] >> mod, assignment >> a, next[i] ^ ExpressionStatement(Expression: a, Modifier: mod)) \
 						| stmt_expression_block \
@@ -587,7 +593,23 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 						Pair(Left: ELSE, Right: block >> falseBlock) ^ falseBlock						
 					) | \
 					("" ^ null)
-				
+
+	stmt_try = Pair(Left: TRY, Right: block >> protectedBlock) \
+			,optional_exception_handler_list >> handlers \
+			,(Pair(Left: FAILURE, Right: block >> failureBlock) | "") \
+			,(Pair(Left: ENSURE, Right: block >> ensureBlock) | "") \
+			^ newTryStatement(protectedBlock, handlers, failureBlock, ensureBlock)
+
+	optional_exception_handler_list = --(
+											here >> i
+											, (
+												(prefix[EXCEPT], Pair(Left: declaration >> d, Right: block >> b))
+												| Pair(Left: EXCEPT, Right: block >> b)
+											)
+											, next[i]
+										    ^ ExceptionHandler(Block: b, Declaration: d) 
+										) >> l ^ l
+
 	stmt_while = here >> i, prefix[WHILE], Pair(Left: (assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
 	
 	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock

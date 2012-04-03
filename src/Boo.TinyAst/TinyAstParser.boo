@@ -98,7 +98,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		
 
 	keywords "and", "as", "cast", "class", "def", "elif", "else", "from", "interface", "import", "if", "in", "namespace", "not", "of", "or", "for", "isa" \
-				, "is", "return", "raise", "unless", "while"
+				, "is", "return", "raise", "try", "unless", "while"
 //	keywords "abstract", "and", "as", "callable", "cast", "class", "constructor", "def", "do", "elif", "else", \
 //		"ensure", "enum", "event", "except", "failure", "final", "for", "from", "goto", "if", "import", \
 //		"interface", "internal", "in", "isa", "is", "namespace", "new", "not", "null", "of", "or", "override", \
