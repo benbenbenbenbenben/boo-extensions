@@ -117,6 +117,9 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	sqs = (SQ, --( sqs_esc | (~('\'' | '\\' | '\r' | '\n'), _)) >> s, SQ) ^ makeString(s)		
 	dqs = (DQ, --( dqs_esc | (~('"' | '\\' | '\r' | '\n'), _)) >> s, DQ) ^ makeString(s)
 
+	single_quote_string = (SQ, --( ('\\\'' ^ '\\\'') | (~('\'' | '\r' | '\n'), _)) >> s, SQ) ^ makeString(["'", s, "'"])		
+	double_quote_string = (DQ, --( ("\\\"" ^ "\\\"") | (~('"' | '\r' | '\n'), _)) >> s, DQ) ^ makeString(['"', s, '"'])
+
 	qualified_name = (ID >> qualifier, --((DOT, id >> n) ^ n) >> suffix)^ buildQName(qualifier, suffix)
 	
 	tqs = (TDQ, --(~tdq, ( (('\\', '$') ^ '$')| _)) >> s, TDQ) ^ makeString(s)
@@ -315,7 +318,7 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		| ((MINUS | "") >> sign, (HEXNUM >> n and (IsValidHexLong(sign, n))), ("L" | "l" | "") >> suffix ^ newInteger(sign, n, NumberStyles.HexNumber, suffix))
 	) >> i ^ Literal((i as IntegerLiteralExpression).Value, i)
 	
-	string_literal = (sqs | dqs) >> s ^ Literal(s, newStringLiteral(s))
+	string_literal = (single_quote_string | double_quote_string) >> s ^ Literal(s, newStringLiteral(s))
 
 	float = ( (fractional_constant >> n, (exponent_part | "") >> e , floating_suffix ) ^ newFloat(makeString(n,e))) | ((NUM >> n, exponent_part >> e, floating_suffix)  ^ newFloat(makeString(tokenValue(n),e)))
 
@@ -357,9 +360,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 	def setTuple(input as OMetaInput, value as int):
 		return success(input.SetMemo("tuple", value))
 
-
-
-
 	enter_lp_tuple = $(enterLPTuple(input))
 	leave_lp_tuple = $(leaveLPTuple(input))
 	reset_lp_tuple = $(resetLPTuple(input))
@@ -384,9 +384,6 @@ ometa TinyAstParser < WhitespaceSensitiveTokenizer:
 		
 	def setLPTuple(input as OMetaInput, value as int):
 		return success(input.SetMemo("lptuple", value))
-
-
-
 
 def newFloat(t):
 	value = double.Parse(t)
