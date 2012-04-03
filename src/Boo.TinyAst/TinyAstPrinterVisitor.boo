@@ -137,15 +137,18 @@ afterMacroExpansion:
 				Write(")") if enclose
 			
 			override def OnLiteral(node as Literal):				
-				Write("'") if node.Value isa string
 				if node.Value isa double:
 					Write((node.Value cast double).ToString("########0.0##########", System.Globalization.CultureInfo.InvariantCulture))
 				elif node.Value isa long:
 					Write(node.Value.ToString())
 					Write("L") if node.Value cast long > int.MaxValue or node.Value cast long < int.MinValue
+				elif node.Value isa string:
+					Write("'")
+					s = node.Value.ToString()
+					Write(s.TrimStart(s[0]).TrimEnd(s[0]))
+					Write("'")
 				else:
 					Write(node.Value.ToString())
-				Write("'") if node.Value isa string
 				
 			override def OnBrackets(node as Brackets):
 				Write(GetStartBracket(node.Type))
