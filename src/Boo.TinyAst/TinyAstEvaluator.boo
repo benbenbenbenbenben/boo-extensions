@@ -344,7 +344,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 	closure_block_left = ((prefix[DEF] | prefix[DO]), method_parameters >> parameters) ^ parameters \
 						| ( (DEF | DO) ^ [[], null])
 	
-	stmt_block = stmt_if | stmt_for | stmt_while
+	stmt_block = stmt_if | stmt_for | stmt_while | stmt_unless
 	
 	stmt_unpack = here >> i, prefixOrInfix, Infix(Operator: ASSIGN, Left: declaration_list >> declarations, Right: rvalue >> e), optional[stmt_modifier] >> m, next[i] ^ newUnpackStatement(declarations, e, m)
 	
@@ -610,7 +610,9 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 										    ^ ExceptionHandler(Block: b, Declaration: d) 
 										) >> l ^ l
 
-	stmt_while = here >> i, prefix[WHILE], Pair(Left: (assignment >> e), Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
+	stmt_while = here >> i, prefix[WHILE], Pair(Left: assignment >> e, Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
+	
+	stmt_unless = here >> i, prefix[UNLESS], Pair(Left: assignment >> e, Right: block >> body), next[i] ^ newUnlessStatement(e, body)	
 	
 	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
 	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
