@@ -2,7 +2,7 @@
 while false:
 	x++
 or:
-	print 'skipped'
+	print('skipped')
 then:
 	pass 
 """
