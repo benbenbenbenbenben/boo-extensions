@@ -610,12 +610,12 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 										    ^ ExceptionHandler(Block: b, Declaration: d) 
 										) >> l ^ l
 
-	stmt_while = here >> i, prefix[WHILE], Pair(Left: assignment >> e, Right: block >> body), or_block >> orBlock, then_block >> thenBlock, next[i] ^ newWhileStatement(e, body, orBlock, thenBlock)
+	stmt_while = here >> i, prefix[WHILE], Pair(Left: assignment >> e, Right: block >> body), next[i], or_block >> orBlock, then_block >> thenBlock ^ newWhileStatement(e, body, orBlock, thenBlock)
 	
 	stmt_unless = here >> i, prefix[UNLESS], Pair(Left: assignment >> e, Right: block >> body), next[i] ^ newUnlessStatement(e, body)	
 	
-	or_block = Pair(Left: OR, Right: block >> orBlock) | "" ^ orBlock
-	then_block = Pair(Left: THEN, Right: block >> thenBlock) | "" ^ thenBlock
+	or_block = (Pair(Left: OR, Right: block >> orBlock) | "") ^ orBlock
+	then_block = (Pair(Left: THEN, Right: block >> thenBlock) | "") ^ thenBlock
 
 	stmt_macro = here >> i, prefix_or_rule[macro_id] >> name, optional_macro_block >> b, optional_prefix_operand[stmt_modifier] >> mod, optional[assignment_list] >> args \
 					, nothing, next[i] ^ newMacro(name, args, b, mod)
