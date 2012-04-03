@@ -108,6 +108,7 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 		EXCEPT = "except"
 		FAILURE = "failure"
 		ENSURE = "ensure"
+		YIELD = "yield"
 
 	expansion = module_member | stmt
 	
@@ -310,8 +311,10 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 				| stmt_expression \
 				| stmt_return \
 				| stmt_try \
-				| stmt_macro \
-				| stmt_raise
+				| stmt_yield \
+				| stmt_raise \
+				| stmt_macro
+
 
 	
 	stmt_expression = (here >> i, optional_prefix_operand[stmt_modifier] >> mod, assignment >> a, next[i] ^ ExpressionStatement(Expression: a, Modifier: mod)) \
@@ -653,6 +656,8 @@ ometa TinyAstEvaluator(compilerParameters as CompilerParameters):
 					, next[i] ^ ReturnStatement(Expression: e, Modifier: m) 
 
 	stmt_raise = here >> i, prefix[RAISE], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ RaiseStatement(Exception: e, Modifier: m)
+	
+	stmt_yield = here >> i, prefix[YIELD], (expression >> e | (prefix[expression] >> e, stmt_modifier >> m)), next[i] ^ YieldStatement(Expression: e, Modifier: m)
 	
 	stmt_modifier = prefix[stmt_modifier_type] >> t, assignment >> e ^ newStatementModifier(t, e)
 	
