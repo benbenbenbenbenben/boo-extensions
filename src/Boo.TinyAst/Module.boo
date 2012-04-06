@@ -2,7 +2,6 @@
 
 import System
 import System.Text
-#import Boo.TinyAst.FormExtensions
 import Boo.Lang.Compiler.Ast
 
 
@@ -32,18 +31,6 @@ class Module(Boo.Lang.Compiler.Ast.Module):
 			else:
 				sb.Append((global as MacroStatement).ToCodeString())
 			sb.AppendLine()
-
-//			foreach (Boo.Lang.Compiler.Ast.Attribute attribute in m.Attributes)
-//				WriteModuleAttribute(attribute);
-//
-//			foreach (Boo.Lang.Compiler.Ast.Attribute attribute in m.AssemblyAttributes)
-//				WriteAssemblyAttribute(attribute);
-
-
-
-//		System.IO.StringWriter writer = new System.IO.StringWriter();
-//		Accept(new Visitors.BooPrinterVisitor(writer));
-//		return writer.ToString();
 		
 		return sb.ToString()
 
