@@ -12,12 +12,17 @@ import NUnit.Framework
 [TestFixture]
 class ParserRoundtripTestFixture:
 
+	protected _parser as BooParser
+	
+	[TestFixtureSetUp]
+	public def SetUpFixture():
+		_parser = BooParser()
+
 	def runTestCase(fname as string):
 		
-		fullName = Path.Combine(booRoundtripTestCasesPath(), fname)
+		fullName = Path.Combine(booRoundtripTestCasesPath(), fname)		
 		
-		parser = BooParser()
-		match parser.module(File.ReadAllText(fullName)):
+		match _parser.module(File.ReadAllText(fullName)):
 			case SuccessfulMatch(Input: input, Value: m=Module()):
 				assert m is not null
 				assert m.Documentation is not null
@@ -837,11 +842,11 @@ class ParserRoundtripTestFixture:
 		runTestCase("splicing-1.boo")
 	
 
-//	[Test]
-//	def splicing_class_body():
-//		runTestCase("splicing-class-body.boo")
-//	
-//
+	[Test]
+	def splicing_class_body():
+		runTestCase("splicing-class-body.boo")
+	
+
 //	[Test]
 //	def splicing_enum_body():
 //		runTestCase("splicing-enum-body.boo")
