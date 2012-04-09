@@ -1,9 +1,12 @@
 namespace Boo.OMeta.Parser
 
 import System
+import System.Text
+import System.Collections
 import Boo.OMeta
 import Boo.Lang.Compiler
 import Boo.Lang.Compiler.Ast
+import Boo.Lang.Useful.Attributes
 
 import System.Globalization
 
@@ -54,18 +57,41 @@ Expands to something that matches:
 ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveTokenizer:
 
 	tokens:
-		qq_begin = "[|"
-		qq_end = "|]"
-		splice_begin = "$"
+		kw = ($(keywordsRule(input)) >> value, ~(letter | digit | '_')) ^ value
+		//kw = (keywords >> value, ~(letter | digit | '_')) ^ value
+		id = ((letter | '_') >> p, --(letter | digit | '_') >> s) ^ makeString(p, s)
+		hexnum = ("0x", ++(hex_digit | digit) >> ds) ^ makeString(ds)
+		num = ++digit
+
+		dot = "."
+		comma = ","
 		equality = "=="
 		inequality = "!="
 		assign = "="
+
+		lparen = "(", enterWhitespaceAgnosticRegion
+		rparen = ")", leaveWhitespaceAgnosticRegion
+
+		tdq = '"""'
+		dq = '"'
+		sq = "'"
+		colon = ":"
+		qq_begin = "[|"
+		qq_end = "|]"
+		lbrack = "[", enterWhitespaceAgnosticRegion
+		rbrack = "]", leaveWhitespaceAgnosticRegion
+		lbrace = "{", enterWhitespaceAgnosticRegion
+		rbrace = "}", leaveWhitespaceAgnosticRegion
+
+		splice_begin = "$"
 		assign_inplace = "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>="
 		xor = "^"
 		increment = "++"
 		decrement = "--"
 		plus = "+"
 		minus = "-"
+		bitwise_and = "&"
+		bitwise_or = "|"
 		exponentiation = "**"
 		star = "*"
 		division = "/"
@@ -78,26 +104,7 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 		less_than_eq = "<="
 		less_than = "<"
 		semicolon = ";"
-		bitwise_and = "&"
-		bitwise_or = "|"
-		hexnum = ("0x", ++(hex_digit | digit) >> ds) ^ makeString(ds)
-		num = ++digit
-		colon = ":"
-		dot = "."
-		comma = ","
-		lparen = "(", enterWhitespaceAgnosticRegion
-		rparen = ")", leaveWhitespaceAgnosticRegion
-		lbrack = "[", enterWhitespaceAgnosticRegion
-		rbrack = "]", leaveWhitespaceAgnosticRegion
-		lbrace = "{", enterWhitespaceAgnosticRegion
-		rbrace = "}", leaveWhitespaceAgnosticRegion
-		
-		kw = (keywords >> value, ~(letter | digit | '_')) ^ value
-		tdq = '"""'
-		dq = '"'
-		sq = "'"
-		
-		id = ((letter | '_') >> p, --(letter | digit | '_') >> s) ^ makeString(p, s)
+
 
 	space = line_continuation | multi_line_comment | line_comment | super
 	
@@ -357,7 +364,8 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	end_block = DEDENT
 	
-	stmt = stmt_block | stmt_line | external_parser_call
+	stmt = stmt_line | stmt_block //| external_parser_call
+	
 	
 	stmt_line = stmt_declaration \
 		| stmt_expression \
@@ -598,11 +606,11 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 	
 	type_reference_simple = (qualified_name >> qname) ^ SimpleTypeReference(Name: qname)
 	
-	atom = time_span | float | integer | boolean | reference | array_literal | list_literal \
-		| string_interpolation | string_literal | reg_exp_string | null_literal | parenthesized_expression  \
+	atom = reference | boolean | string_interpolation | string_literal | time_span | float | integer | array_literal | list_literal \
+		| parenthesized_expression | reg_exp_string | null_literal  \
 		| self_literal | super_literal | quasi_quote | hash_literal | closure  \
 		| type_literal | splice_expression | ommited
-	
+
 	ommited = ~~DOT ^ OmittedExpression()
 		
 	type_literal = (TYPEOF, LPAREN, type_reference >> type, RPAREN) ^ newTypeofExpression(type)
@@ -762,3 +770,59 @@ ometa BooParser(compilerParameters as CompilerParameters) < WhitespaceSensitiveT
 			sm.Input.SetMemo("indentLevel", indentLevel)
 			
 		return result
+
+def keywordsRule(input as OMetaInput):
+	
+	return FailedMatch(input, RuleFailure("keywordsRule", PredicateFailure("keywordsRule"))) if input.IsEmpty
+	
+	current = input
+	k = getSortedKeywords()
+	
+	sb = StringBuilder()
+	sb.Append(current.Head)
+	
+	s = sb.ToString()
+	j = Array.BinarySearch(k, s)
+	
+	return s if j >= 0 //return if symbol is a keyword
+	
+	i = ~(j) //index of first keyword which is greater than current index
+	
+	found = -1
+	r = 1
+	current = current.Tail
+	while r >= 0 and not current.IsEmpty and (current.Head isa Char) and (current.Head cast Char).IsLetter:
+		sb.Append(current.Head)		
+		s = sb.ToString()
+		
+		while i < k.Length and ((r = CompareInputAndKeyword(s, k[i])) > 0):			
+			i++
+		
+		if r == 0 and s.Length == k[i].Length:
+			found = i
+			resultInput = current.Tail
+		
+		current = current.Tail
+		
+	return SuccessfulMatch(resultInput, k[found]) if found > -1
+	return FailedMatch(input, null)
+
+private def CompareInputAndKeyword(input as string, keyword as string):
+	i = 0
+	r = 0	
+	while r == 0 and i < input.Length and i < keyword.Length:
+		r = input[i].CompareTo(keyword[i])
+		i++
+
+	return (1 if r > 0 else -1) if r != 0
+	return 0 if i == input.Length
+	return 1
+
+[once] def getSortedKeywords():
+	k = ("abstract","and","as","callable","cast","class","constructor","def","do","elif","else","ensure","enum","event","except","failure","false"
+		,"final","for","from","goto","if","import","in","interface","internal","is","isa","namespace","new","not","null","of","or","override","pass"
+		,"private","protected","public","raise","return","self","static","struct","super","then","transient","true","try","typeof","unless","virtual"
+		,"while","yield")
+	return k
+	Array.Sort(k)
+	return k
