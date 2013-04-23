@@ -11,12 +11,12 @@ class OMetaInputTest:
 		
 		arg = "foo"
 		input = OMetaInput.Empty()
-		input1 = OMetaInput.Prepend(arg, input)
-		input2 = OMetaInput.Prepend(arg, input)
+		input1 = input.Prepend(arg)
+		input2 = input.Prepend(arg)
 		
 		assert input1 == input2
 		
-		input3 = OMetaInput.Prepend("bar", input)
+		input3 = input.Prepend("bar")
 		assert input1 != input3
 		
 #	[Test]
@@ -45,3 +45,11 @@ class OMetaInputTest:
 		while not input.IsEmpty:
 			Assert.AreSame(input.Tail, input.Tail)
 			input = input.Tail
+			
+	[Test]
+	def PrependPreservesMemo():
+		input = OMetaInput.For("foo")
+		input1 = input.SetMemo("a", "b")
+		input2 = input1.Prepend("bar")
+		assert input2.GetMemo("a") == "b"
+		
