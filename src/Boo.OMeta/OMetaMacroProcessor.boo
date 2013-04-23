@@ -60,12 +60,12 @@ class OMetaMacroProcessor:
 					type.Members.Add(m0)
 					m1 = [|
 						def $name(input as OMetaInput, $arg):
-							return Apply($name, OMetaInput.Prepend($arg, input))
+							return Apply($name, input.Prepend($arg))
 					|]
 					type.Members.Add(m1)
 					m2 = [|
 						def $name(input as System.Collections.IEnumerable, $arg):
-							return Apply($name, OMetaInput.Prepend($arg, OMetaInput.For(input)))
+							return Apply($name, OMetaInput.For(input).Prepend($arg))
 					|]
 					type.Members.Add(m2)
 					
