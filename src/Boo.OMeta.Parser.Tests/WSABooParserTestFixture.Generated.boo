@@ -660,7 +660,7 @@ partial class WSABooParserTestFixture:
 		runTestCase("long-literals-1.boo")
 	
 	
-	[Test]
+	[Test, Ignore]
 	def macro_doc():	
 		runTestCase("macro-doc.boo")
 	
