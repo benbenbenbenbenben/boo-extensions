@@ -272,15 +272,7 @@ class OMetaMacroRuleProcessor:
 				block.Add(code) 
 				
 			case ArrayLiteralExpression(Items: items):
-				match items[0]:
-					case [| ~$rule |]:
-						negation = expandNegation(block, rule, input, lastMatch)
-						if len(items) > 2:
-							expandSequence negation.TrueBlock, items.PopRange(1), input, lastMatch
-						else:
-							expand negation.TrueBlock, items[1], input, lastMatch
-					otherwise:
-						expandSequence block, items, input, lastMatch 
+				expandSequence block, items, input, lastMatch 
 						
 	def effectiveArgForRule(arg as Expression):
 		match arg:
