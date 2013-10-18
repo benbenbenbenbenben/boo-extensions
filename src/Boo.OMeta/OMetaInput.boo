@@ -9,12 +9,12 @@ class OMetaInput:
 		return ForEnumerator(enumerable.GetEnumerator())
 		
 	static def ForEnumerator(enumerator as IEnumerator) as OMetaInput:
-		return ForEnumerator(enumerator, 0, 0, 0)
+		return ForEnumerator(enumerator, 0)
 		
-	static def ForEnumerator(enumerator as IEnumerator, position as int, column as int, line as int) as OMetaInput:
+	static def ForEnumerator(enumerator as IEnumerator, position as int) as OMetaInput:
 		if enumerator.MoveNext():
-			return EnumeratorInput(enumerator, position, column, line)
-		return Empty()
+			return EnumeratorInput(enumerator, position)
+		return EndOfEnumeratorInput(position)
 		
 	static def Prepend(argument, input as OMetaInput):
 		return OMetaInputCons(argument, input)
@@ -39,14 +39,6 @@ class OMetaInput:
 		
 	virtual Position:
 		get: return int.MaxValue
-	
-	virtual Column:
-		get: return int.MaxValue
-		set: pass
-		
-	virtual Line:
-		get: return int.MaxValue
-		set: pass
 		
 	virtual def SetMemo(key as string, value) as OMetaInput:
 		return OMetaInputWithMemo(key, value, self)
@@ -76,20 +68,6 @@ internal class DelegatingInput(OMetaInput):
 	override Position:
 		get: return _input.Position
 		
-	override Column:
-		get: return _input.Column
-		set:
-			_input.Column = value
-			if not _input.Tail is null:
-				_input.Tail.Column = value
-	
-	override Line:
-		get: return _input.Line
-		set: 
-			_input.Line = value
-			if not _input.Tail is null:
-				_input.Tail.Line = value
-		
 	override def SetMemo(key as string, value):
 		return _input.SetMemo(key, value)
 		
@@ -111,11 +89,14 @@ internal class OMetaInputWithMemo(DelegatingInput):
 		_value = value
 	
 	override Tail:
-		get:
-			if _tail is null:
-				_tail = OMetaInputMemoTail(self, _input.Tail)
-			return _tail
+		get: return _tail or _tail = OMetaInputMemoTail(self, _input.Tail)
 			
+	override def SetMemo(key as string, value) as OMetaInput:
+		if key is _key: 
+			return OMetaInputWithMemo(key, value, _input)
+		else:
+			return OMetaInputWithMemo(key, value, self)
+
 	override def GetMemo(key as string):
 		if key is _key: return _value
 		return super(key)
@@ -130,15 +111,16 @@ internal class OMetaInputMemoTail(DelegatingInput):
 		_parent = parent
 		
 	override Tail:
-		get:
-			if _tail is null:
-				_tail = OMetaInputMemoTail(self, _input.Tail)
-			return _tail
+		get: return _tail or _tail = OMetaInputMemoTail(self, _input.Tail)
+		
+	override def SetMemo(key as string, value) as OMetaInput:
+		return _parent.SetMemo(key, value).Tail
 		
 	override def GetMemo(key as string):
 		return _parent.GetMemo(key)
 		
 internal class OMetaInputCons(OMetaInput):
+	
 	[getter(Head)] _argument as object
 	[getter(Tail)] _tail as OMetaInput
 	
@@ -146,41 +128,29 @@ internal class OMetaInputCons(OMetaInput):
 		_argument = argument
 		_tail = tail
 		
+	override Position:
+		get: return Tail.Position
+		
 	override IsEmpty:
 		get: return false
+		
+	override def ToString():
+		return "cons($_argument, $_tail)"
 
 internal class EnumeratorInput(OMetaInput):
 	
 	final _position as int
-	_column as int
-	_line as int
 	final _input as IEnumerator
 	final _head as object
 	_tail as OMetaInput
 	
-	internal def constructor(input as IEnumerator, position as int, column as int, line as int):
+	internal def constructor(input as IEnumerator, position as int):
 		_input = input
 		_head = input.Current
 		_position = position
-		_line = line
-		_column = column
 		
 	override Position:
 		get: return _position
-		
-	override Column:
-		get: return _column
-		set: 
-			_column = value
-			if not _tail is null:
-				_tail.Column = value
-		
-	override Line:
-		get: return _line
-		set: 
-			_line = value
-			if not _tail is null:
-				_tail.Line = value
 		
 	override IsEmpty:
 		get: return false
@@ -189,10 +159,15 @@ internal class EnumeratorInput(OMetaInput):
 		get: return _head
 	
 	override Tail:
-		get:
-			if _tail is null:
-				_tail = ForEnumerator(_input, _position + 1, _column + 1, _line)
-			return _tail
+		get: return _tail or _tail = ForEnumerator(_input, _position + 1)
 		
 	override def ToString():
-		return "OMetaInput(Head: ${Head}, Position: ${Position})"
+		return "OMetaInput(Head: $Head, Position: $Position)"
+		
+internal class EndOfEnumeratorInput(OMetaInput):
+	
+	def constructor(position as int):
+		_position = position
+		
+	[getter(Position)]
+	_position as int
