@@ -46,7 +46,7 @@ ometa WhitespaceSensitiveTokenizer():
 	empty_line = spaces, newline
 	spaces = --space >> value ^ value
 	space = ' ' | '\t' | (newline and inWSA(input))
-	newline = '\n' | "\r\n" | "\r"
+	newline = '\n' | "\r\n" | "\r" ^ nextLine(input)
 	token[expected] = (scanner >> t and tokenMatches(t, expected)) ^ t
 	
 	wsa = ~~_ and inWSA(input)
@@ -116,6 +116,10 @@ ometa WhitespaceSensitiveTokenizer():
 	def getIndent(input as OMetaInput) as int:
 		return indentStack(input)[-1]
 
+	def nextLine(input as OMetaInput):
+		input.Line += 1
+		input.Column = 0
+		return input
 		
 def tokenMatches(token as Token, expected):
 	return expected is token.kind
