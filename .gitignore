@@ -5,3 +5,12 @@ build.properties
 *.userprefs
 test-results
 .gradle
+/src/Boo.Adt/obj
+/src/Boo.Pegs/obj
+/src/Boo.OMeta/obj
+/src/Boo.OMeta.Parser/obj
+/src/Boo.OMeta.Parser.Tests/obj
+/src/Boo.OMeta.Tests/obj
+/src/OMetaParserConsole/obj
+
+/src/OMetaParserConsole/app.config

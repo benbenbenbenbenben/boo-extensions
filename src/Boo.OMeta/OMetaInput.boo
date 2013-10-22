@@ -2,6 +2,7 @@ namespace Boo.OMeta
 
 import System
 import System.Collections
+import System.Collections.Specialized
 
 class OMetaInput:
 
@@ -16,11 +17,8 @@ class OMetaInput:
 			return EnumeratorInput(enumerator, position)
 		return EndOfEnumeratorInput(position)
 		
-	static def Prepend(argument, input as OMetaInput):
-		return OMetaInputCons(argument, input)
-		
 	static def Singleton(o):
-		return Prepend(o, Empty())
+		return OMetaInputCons(o, Empty())
 		
 	static def Empty():
 		return OMetaInput()
@@ -39,6 +37,9 @@ class OMetaInput:
 		
 	virtual Position:
 		get: return int.MaxValue
+	
+	virtual def Prepend(argument) as OMetaInput:
+		return OMetaInputCons(argument, self)
 		
 	virtual def SetMemo(key as string, value) as OMetaInput:
 		return OMetaInputWithMemo(key, value, self)
@@ -78,46 +79,69 @@ internal class DelegatingInput(OMetaInput):
 		return _input.ToString()
 		
 internal class OMetaInputWithMemo(DelegatingInput):
-	
-	final _key as string
-	final _value as object
+	final _dictionary as ListDictionary
 	_tail as OMetaInput
-	
+
 	def constructor(key as string, value, input as OMetaInput):
 		super(input)
-		_key = key
-		_value = value
-	
+		_dictionary = ListDictionary()
+		_dictionary.Add(key, value)
+
+	protected def constructor(input as OMetaInput, dictionary as ListDictionary):
+		self(input, dictionary, null)
+
+	protected def constructor(input as OMetaInput, dictionary as ListDictionary, tail as OMetaInput):
+		super(input)
+		_dictionary = dictionary
+		_tail = tail
+
+	protected def Clone():
+		dictionaryCopy = ListDictionary()
+		for item as DictionaryEntry in _dictionary:	dictionaryCopy.Add(item.Key, item.Value)
+		return OMetaInputWithMemo(_input, dictionaryCopy)
+
+	protected def SetDictionaryEntry(key as string, value):
+		_dictionary[key] = value
+ 	
 	override Tail:
 		get: return _tail or _tail = OMetaInputMemoTail(self, _input.Tail)
-			
+
 	override def SetMemo(key as string, value) as OMetaInput:
-		if key is _key: 
-			return OMetaInputWithMemo(key, value, _input)
-		else:
-			return OMetaInputWithMemo(key, value, self)
+		newInputWithMemo = Clone()
+		newInputWithMemo.SetDictionaryEntry(key, value)
+		return newInputWithMemo
 
 	override def GetMemo(key as string):
-		if key is _key: return _value
-		return super(key)
-		
+		if _dictionary.Contains(key): return _dictionary[key]
+		return _input.GetMemo(key)
+
+	override def Prepend(argument) as OMetaInput:
+		return OMetaInputWithMemo(_input.Prepend(argument), _dictionary, self)
+
 internal class OMetaInputMemoTail(DelegatingInput):
-	
-	final _parent as OMetaInput
+
+	final _parent as OMetaInputWithMemo
 	_tail as OMetaInput
-	
-	def constructor(parent as OMetaInput, input as OMetaInput):
+
+	def constructor(parent as OMetaInputWithMemo, input as OMetaInput):
+		self(parent, input, null)
+
+	def constructor(parent as OMetaInputWithMemo, input as OMetaInput, tail as OMetaInput):
 		super(input)
 		_parent = parent
-		
+		_tail = tail
+
 	override Tail:
-		get: return _tail or _tail = OMetaInputMemoTail(self, _input.Tail)
-		
+		get: return _tail or _tail = OMetaInputMemoTail(_parent, _input.Tail)
+
 	override def SetMemo(key as string, value) as OMetaInput:
-		return _parent.SetMemo(key, value).Tail
-		
+		return OMetaInputMemoTail(_parent.SetMemo(key, value), _input)
+
 	override def GetMemo(key as string):
 		return _parent.GetMemo(key)
+
+	override def Prepend(argument) as OMetaInput:
+		return OMetaInputMemoTail(_parent, _input.Prepend(argument), self)
 		
 internal class OMetaInputCons(OMetaInput):
 	

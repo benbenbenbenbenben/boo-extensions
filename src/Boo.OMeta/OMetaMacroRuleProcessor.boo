@@ -50,18 +50,18 @@ class OMetaMacroRuleProcessor:
 		currentBlock = block
 		
 		oldInput = uniqueName()
-		failureList = uniqueName()
-		currentBlock.Add([| $failureList = Boo.Lang.List[of FailedMatch]($(len(choices))) |])
+		choiceFailures = ReferenceExpression(Name: "choiceFailures")
+		currentBlock.Add([| $choiceFailures = Boo.Lang.List[of FailedMatch]($(len(choices))) |])
 		currentBlock.Add([| $oldInput = $input |])
 		for choice in choices:
 			expand currentBlock, choice, oldInput, lastMatch
 			code = [|
 				if $lastMatch isa FailedMatch:
-					$failureList.Add($lastMatch)
+					$choiceFailures.Add($lastMatch)
 			|]
 			currentBlock.Add(code)
 			currentBlock = code.TrueBlock
-		currentBlock.Add([| $lastMatch = FailedMatch($oldInput, ChoiceFailure($failureList)) |])
+		currentBlock.Add([| $lastMatch = FailedMatch($oldInput, ChoiceFailure($choiceFailures)) |])
 		
 	def resultAppend(result as Expression):
 		if collectingParseTree:
@@ -178,7 +178,7 @@ class OMetaMacroRuleProcessor:
 			case [| $rule[$arg] |]:
 				newInput = uniqueName()
 				effectiveArg = effectiveArgForRule(arg)
-				block.Add([| $newInput = OMetaInput.Prepend($effectiveArg, $input) |])
+				block.Add([| $newInput = $input.Prepend($effectiveArg) |])
 				expand block, rule, newInput, lastMatch
 				
 			case [| $pattern and $predicate |]:
@@ -272,15 +272,7 @@ class OMetaMacroRuleProcessor:
 				block.Add(code) 
 				
 			case ArrayLiteralExpression(Items: items):
-				match items[0]:
-					case [| ~$rule |]:
-						negation = expandNegation(block, rule, input, lastMatch)
-						if len(items) > 2:
-							expandSequence negation.TrueBlock, items.PopRange(1), input, lastMatch
-						else:
-							expand negation.TrueBlock, items[1], input, lastMatch
-					otherwise:
-						expandSequence block, items, input, lastMatch 
+				expandSequence block, items, input, lastMatch 
 						
 	def effectiveArgForRule(arg as Expression):
 		match arg:

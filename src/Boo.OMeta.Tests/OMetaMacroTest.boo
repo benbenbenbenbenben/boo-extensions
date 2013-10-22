@@ -3,7 +3,6 @@ namespace Boo.OMeta.Tests
 import Boo.OMeta
 import Boo.Lang.PatternMatching
 import Boo.Adt
-
 import NUnit.Framework
 
 ometa E:
@@ -221,20 +220,6 @@ class OMetaMacroTest:
 		
 		assertRule XXE(), 'exp', "1%2/3", [[['1'], '%', ['2']], '/', ['3']]
 		
-	[Test]
-	def TestNot():
-		
-		ometa Lines:
-			
-			option ParseTree
-			
-			parse = ++((line >> l, (newline | eof)) ^ join(l, ''))
-			line = ++(~newline, _)
-			newline = "\n" | "\r\n" | "\r"
-			eof = ~_
-			
-		lines = ["foo", "bar", "baz"]
-		assertMatch lines, Lines().parse(OMetaInput.For(lines.Join("\n")))
 		
 	[Test]
 	def TestBinding():
@@ -255,7 +240,8 @@ class OMetaMacroTest:
 		match HexParser().parse("0xff"):
 			case SuccessfulMatch(Value: "ff"):
 				pass
-		
+
+
 	def assertE(grammar as OMetaGrammar):
 		assertRule grammar, 'exp', "11+31", [['1', '1'], '+', ['3', '1']]
 		assertRule grammar, 'exp', "1+2*3", [['1'], '+', [['2'], '*', ['3']]]

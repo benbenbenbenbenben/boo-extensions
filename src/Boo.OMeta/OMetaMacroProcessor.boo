@@ -60,12 +60,12 @@ class OMetaMacroProcessor:
 					type.Members.Add(m0)
 					m1 = [|
 						def $name(input as OMetaInput, $arg):
-							return Apply($name, OMetaInput.Prepend($arg, input))
+							return Apply($name, input.Prepend($arg))
 					|]
 					type.Members.Add(m1)
 					m2 = [|
 						def $name(input as System.Collections.IEnumerable, $arg):
-							return Apply($name, OMetaInput.Prepend($arg, OMetaInput.For(input)))
+							return Apply($name, OMetaInput.For(input).Prepend($arg))
 					|]
 					type.Members.Add(m2)
 					
@@ -113,6 +113,12 @@ class OMetaMacroProcessor:
 		
 	def introduceGrammarParameters(type as TypeDefinition):
 		mie = ometa.Arguments[0] as MethodInvocationExpression
+		match ometa.Arguments[0]:
+			case [| $e < $_|]:
+				mie = e as MethodInvocationExpression
+			otherwise:    
+				mie = ometa.Arguments[0] as MethodInvocationExpression 		
+		
 		if mie is null: return
 		
 		for arg in mie.Arguments:
@@ -127,10 +133,14 @@ class OMetaMacroProcessor:
 					introduceGrammarField type, paramName, null, value
 					
 	def introduceGrammarParameter(type as TypeDefinition, name as ReferenceExpression, paramType as TypeReference):
+	"""
+	Creating fields for grammar parameters. Also creating additional constructor to initialize the parameters.    
+	"""		
 		introduceGrammarField type, name, paramType, null
-		ctor = type.GetConstructor(0)
+		ctor = type.GetConstructor(0).CloneNode()
 		ctor.Parameters.Add(ParameterDeclaration(Name: name.Name, Type: paramType))
 		ctor.Body.Add([| self.$name = $name |])
+		type.Members.Add(ctor)
 		
 	def introduceGrammarField(type as TypeDefinition, name as ReferenceExpression, fieldType as TypeReference, initializer as Expression):
 		type.Members.Add(Field(Name: name.Name, Type: fieldType, Initializer: initializer))
@@ -146,6 +156,7 @@ class OMetaMacroProcessor:
 def prototypeFor(e as Expression) as MethodInvocationExpression:
 	match e:
 		case [| $_ < $prototype |]:
+			if prototype isa MethodInvocationExpression: return prototype
 			return [| $prototype() |]
 		otherwise:
 			return [| OMetaGrammarPrototype() |]
