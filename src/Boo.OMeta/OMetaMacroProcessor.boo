@@ -38,6 +38,7 @@ class OMetaMacroProcessor:
 				case ExpressionStatement(Expression: [| $(ReferenceExpression(Name: name)) = $pattern |]):
 					m0 = [|
 						private def $("${name}_rule")(context as OMetaEvaluationContext, input_ as OMetaInput) as OMetaMatch:
+							lastMatch as OMetaMatch = SuccessfulMatch(input_, null)
 							$(OMetaMacroRuleProcessor(name, options, ruleNames).expand(pattern))
 					|]
 					type.Members.Add(m0)
@@ -55,17 +56,20 @@ class OMetaMacroProcessor:
 				case ExpressionStatement(Expression: [| $(ReferenceExpression(Name: name))[$arg] = $pattern |]):
 					m0 = [|
 						private def $("${name}_rule")(context as OMetaEvaluationContext, input_ as OMetaInput) as OMetaMatch:
+							lastMatch as OMetaMatch = SuccessfulMatch(input_, null)
 							$(OMetaMacroRuleProcessor(name, options, ruleNames).expand(pattern, arg))
 					|]
 					type.Members.Add(m0)
 					m1 = [|
 						def $name(input as OMetaInput, $arg):
-							return Apply($name, input.Prepend($arg))
+							return Apply($name, input.Prepend($arg, null))
 					|]
 					type.Members.Add(m1)
+
 					m2 = [|
 						def $name(input as System.Collections.IEnumerable, $arg):
-							return Apply($name, OMetaInput.For(input).Prepend($arg))
+							
+							return Apply($name, OMetaInput.For(input).Prepend($arg, null))
 					|]
 					type.Members.Add(m2)
 					
@@ -112,12 +116,12 @@ class OMetaMacroProcessor:
 		return type
 		
 	def introduceGrammarParameters(type as TypeDefinition):
-		mie = ometa.Arguments[0] as MethodInvocationExpression
+		
 		match ometa.Arguments[0]:
 			case [| $e < $_|]:
 				mie = e as MethodInvocationExpression
-			otherwise:    
-				mie = ometa.Arguments[0] as MethodInvocationExpression 		
+			otherwise:		
+				mie = ometa.Arguments[0] as MethodInvocationExpression		
 		
 		if mie is null: return
 		
@@ -134,8 +138,8 @@ class OMetaMacroProcessor:
 					
 	def introduceGrammarParameter(type as TypeDefinition, name as ReferenceExpression, paramType as TypeReference):
 	"""
-	Creating fields for grammar parameters. Also creating additional constructor to initialize the parameters.    
-	"""		
+	Creating fields for grammar parameters. Also creating additional constructor to initialize the parameters.		
+	"""
 		introduceGrammarField type, name, paramType, null
 		ctor = type.GetConstructor(0).CloneNode()
 		ctor.Parameters.Add(ParameterDeclaration(Name: name.Name, Type: paramType))

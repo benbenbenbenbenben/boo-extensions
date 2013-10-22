@@ -11,12 +11,12 @@ class OMetaInputTest:
 		
 		arg = "foo"
 		input = OMetaInput.Empty()
-		input1 = input.Prepend(arg)
-		input2 = input.Prepend(arg)
+		input1 = input.Prepend(arg, null)
+		input2 = input.Prepend(arg, null)
 		
 		assert input1 == input2
 		
-		input3 = input.Prepend("bar")
+		input3 = input.Prepend("bar", null)
 		assert input1 != input3
 		
 #	[Test]
@@ -47,9 +47,16 @@ class OMetaInputTest:
 			input = input.Tail
 			
 	[Test]
-	def PrependPreservesMemo():
-		input = OMetaInput.For("foo")
-		input1 = input.SetMemo("a", "b")
-		input2 = input1.Prepend("bar")
-		assert input2.GetMemo("a") == "b"
+	def OMetaInputWithMemoStoresValues():
+		input = OMetaInput.For(range(3))
+		
+		input = input.SetMemo("a", 1)
+		input = input.Tail.SetMemo("b", 2)
+		
+		assert input.GetMemo("a") == 1
+		assert input.GetMemo("b") == 2
+
+		assert input.Tail.GetMemo("a") == 1
+		assert input.Tail.GetMemo("b") == 2
+
 		

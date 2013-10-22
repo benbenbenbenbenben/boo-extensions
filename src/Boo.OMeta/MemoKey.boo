@@ -11,7 +11,7 @@ class MemoKey:
 		
 	override def Equals(o):
 		other as MemoKey = o
-		return input is other.input and rule is other.rule
+		return input is other.input and rule == other.rule
 		
 	override def GetHashCode():
 		return rule.GetHashCode() ^ input.GetHashCode()

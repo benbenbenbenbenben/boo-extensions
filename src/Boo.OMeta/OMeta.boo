@@ -48,7 +48,7 @@ def scan(context as OMetaEvaluationContext, rule as string, input as OMetaInput)
 def flatten(items) as object*:
 	if items is null: return
 	e1 = items as System.Collections.IEnumerable
-	if e1 is null:
+	if (e1 is null) or (items isa string):
 		yield items
 		return
 	for item in e1:
@@ -57,7 +57,7 @@ def flatten(items) as object*:
 def flattenNoNulls(items) as object*:
 	if items is null: return
 	e1 = items as System.Collections.IEnumerable
-	if e1 is null:
+	if (e1 is null) or (items isa string):
 		yield items
 		return
 	for item in e1:

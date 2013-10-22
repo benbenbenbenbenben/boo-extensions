@@ -10,11 +10,12 @@ import Boo.Lang.Compiler.Ast
 def newMacro(name, args, block, m):
 	
 	if block isa List:
-		node = MacroStatement(Name: tokenValue(name), Body: (block as List)[1], Modifier: m, Documentation: (block as List)[0])
+		node = MacroStatement(Name: name, Body: (block as List)[1], Modifier: m, Documentation: (block as List)[0])
 	else:
-		node = MacroStatement(Name: tokenValue(name), Body: block, Modifier: m)
-		
-	for arg in args: node.Arguments.Add(arg)
+		node = MacroStatement(Name: name, Body: block, Modifier: m)
+	
+	if args is not null:
+		for arg in args: node.Arguments.Add(arg)
 	return node
 
 def newSlicing(target as Expression, slices):
@@ -39,7 +40,7 @@ def newWhileStatement(condition, body, orBlock, thenBlock):
 	return node
 
 def newDeclaration(name, type as TypeReference):
-	return Declaration(Name: tokenValue(name), Type: type)
+	return Declaration(Name: name, Type: type)
 
 def newDeclarationStatement(d as Declaration,  initializer as Expression):
 	return DeclarationStatement(Declaration: d, Initializer: initializer)
@@ -67,7 +68,7 @@ def newIfStatement(condition as Expression, trueBlock as Block, falseBlock as Bl
 	return IfStatement(Condition: condition, TrueBlock: trueBlock, FalseBlock: falseBlock)
 	
 def newCallable(modifiers, name, genericParameters as List, parameters as List, type):
-	node = CallableDefinition(Name: tokenValue(name), ReturnType: type)
+	node = CallableDefinition(Name: name, ReturnType: type)
 	
 	#return setUpType(ClassDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)	
 	setUpMember(node, null, modifiers)
@@ -97,7 +98,7 @@ def newModule(ns as string, doc, imports, members, stmts):
 			m.Globals.Add(member as Statement)
 		else:
 			m.Members.Add(member)
-	for stmt as Statement in stmts: m.Globals.Add(stmt)
+	for stmt as Statement in flatten(stmts): m.Globals.Add(stmt)
 	return m
 	
 def newImport(qname as string, assembly, alias):
@@ -113,7 +114,7 @@ def newImport(qname as string, assembly, alias):
 	else:
 		importAlias =	ReferenceExpression(Name: alias) if alias is not null
 		
-	return Import(qname, AssemblyReference: assemblyReference, Alias: importAlias)
+	return Import(ReferenceExpression(qname), assemblyReference, importAlias)
 
 def newInteger(sign, t, style as NumberStyles, suffix):
 	s = tokenValue(sign) + tokenValue(t)
@@ -137,13 +138,13 @@ def newFloat(t):
 	return DoubleLiteralExpression(Value: value)
 
 def newEvent(attributes, modifiers, name, type):
-	return setUpMember(Event(Name: tokenValue(name), Type: type), attributes, modifiers)
+	return setUpMember(Event(Name: name, Type: type), attributes, modifiers)
 	
 def newField(attributes, modifiers, name, type, initializer):
-	return setUpMember(Field(Name: tokenValue(name), Type: type, Initializer: initializer), attributes, modifiers)
+	return setUpMember(Field(Name: name, Type: type, Initializer: initializer), attributes, modifiers)
 	
 def newProperty(attributes, modifiers, name, parameters, type, getter, setter):
-	node = Property(Name: tokenValue(name), Type: type, Getter: getter, Setter: setter)
+	node = Property(Name: name, Type: type, Getter: getter, Setter: setter)
 	setUpParameters node, parameters
 	return setUpMember(node, attributes, modifiers)
 	
@@ -161,7 +162,7 @@ def setUpParameters(node as INodeWithParameters, parameters):
 	for p in flatten(parameters): node.Parameters.Add(p)
 	
 def newMethod(attributes, modifiers, name, parameters as List, returnTypeAttributes, returnType as TypeReference, body as Block) as Method:
-	node = Method(Name: tokenValue(name), Body: body, ReturnType: returnType)
+	node = Method(Name: name, Body: body, ReturnType: returnType)
 
 	if parameters[1] != null: //Check if ParamArray is present
 		setUpParameters node, parameters
@@ -204,7 +205,7 @@ def newGenericTypeDefinitionReference(qname, placeholders as List):
 
 
 def newGenericParameterDeclaration(name, constraints):
-	node = GenericParameterDeclaration(Name: tokenValue(name))
+	node = GenericParameterDeclaration(Name: name)
 
 	if constraints is not null:
 		for constraint in constraints:
@@ -216,11 +217,11 @@ def newGenericParameterDeclaration(name, constraints):
 	return node
 	
 def newParameterDeclaration(attributes, name, type):
-	node = ParameterDeclaration(Name: tokenValue(name), Type: type)
+	node = ParameterDeclaration(Name: name, Type: type)
 	return setUpAttributes(node, attributes)
 	
 def newEnum(attributes, modifiers, name, members):
-	return setUpType(EnumDefinition(Name: tokenValue(name)), attributes, modifiers, null, null, members)
+	return setUpType(EnumDefinition(Name: name), attributes, modifiers, null, null, members)
 	
 def newCallableTypeReference(params, paramArray, type):
 	node = CallableTypeReference(ReturnType: type)
@@ -257,13 +258,13 @@ def newEnumField(attributes, name, initializer):
 			initializer = e
 		otherwise:
 			pass
-	return setUpMember(EnumMember(Name: tokenValue(name), Initializer: initializer), attributes, null)
+	return setUpMember(EnumMember(Name: name, Initializer: initializer), attributes, null)
 	
 def newClass(attributes, modifiers, name, genericParameters, baseTypes, members):
-	return setUpType(ClassDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
+	return setUpType(ClassDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 def newStruct(attributes, modifiers, name, genericParameters, baseTypes, members):
-	return setUpType(StructDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
+	return setUpType(StructDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 	
 def setUpType(type as TypeDefinition, attributes, modifiers, genericParameters, baseTypes, members):
@@ -297,7 +298,7 @@ def newNamedArgument(name, value):
 	return ExpressionPair(First: newReference(name), Second: value)
 	
 def newInterface(attributes, modifiers, name, genericParameters, baseTypes, members):
-	return setUpType(InterfaceDefinition(Name: tokenValue(name)), attributes, modifiers, genericParameters, baseTypes, members)
+	return setUpType(InterfaceDefinition(Name: name), attributes, modifiers, genericParameters, baseTypes, members)
 	
 def newInvocation(target as Expression, args as List, genericArgs as object):
 	
@@ -311,17 +312,15 @@ def newInvocation(target as Expression, args as List, genericArgs as object):
 	setUpArgs mie, flattenNoNulls(args)	
 	return mie
 	
-def newQuasiquoteBlock(m):
-	return QuasiquoteExpression(Node: m)
 	
 def newQuasiquoteExpression(s):
 	return QuasiquoteExpression(Node: s)
 	
 def newReference(t):
-	return ReferenceExpression(Name: tokenValue(t))
+	return ReferenceExpression(Name: t)
 	
 def newMemberReference(target as Expression, name):
-	return MemberReferenceExpression(Target: target, Name: tokenValue(name))
+	return MemberReferenceExpression(Target: target, Name: name)
 	
 def newArrayLiteral(type, items):
 	node = newArrayLiteral(items)
@@ -358,10 +357,14 @@ def newStringInterpolation(items as List):
 def newConditionalExpression(condition, trueValue, falseValue):
 	return ConditionalExpression(Condition: condition, TrueValue: trueValue, FalseValue: falseValue)
 	
-def newBlockExpression(parameters as List, body):
+def newBlockExpression(start as OMetaInput, end as OMetaInput, parameters as List, body):
+	parameters = [[], null] if parameters is null
 	node = BlockExpression(Body: body)
 	for p in parameters[0]:
 		node.Parameters.Add(p)
+		
+	node.EndSourceLocation = LexicalInfo("", getLine(end), getColumn(end))
+		
 	return node
 	
 def newTypeofExpression(type):
@@ -439,8 +442,12 @@ def binaryOperatorFor(op):
 	
 def newAssignment(l as Expression, r as Expression):
 	return [| $l = $r |]
-	
-def newBlock(contents, doc):
+
+def newBlock(start as OMetaInput, end as OMetaInput, contents, doc):
+/*
+start - first symbol of the block
+end - last symbol of the block
+*/
 	b = Block()
 	match contents:
 		case Statement():
@@ -450,10 +457,27 @@ def newBlock(contents, doc):
 				if item:
 					b.Statements.Add(item)
 	b.Documentation  = doc
+	end = findPrevCharInput(end)
+	b.EndSourceLocation = LexicalInfo("", getLine(end), getColumn(end) + 1)//EndSourceLocation is the next symbol after the expression
+	
 	return b
 	
+def findPrevCharInput(input as OMetaInput):
+	while input:		
+		if isCharInput(input): return input
+		input = input.Prev		
+	return null
+	
+def isCharInput(input as OMetaInput):
+	if input.IsEmpty or (not input.Head isa char): return false
+	if input.Head == char('\n') or input.Head == char('\r'): return false
+	return true
+	
+	
 def prepend(first, tail as List):
-	if first is null: return tail
+	return tail if first is null
+	return [first] if tail is null and not first isa List 
+	return (first as List) + tail if first isa List
 	return [first] + tail
 	
 def buildQName(q, rest):
@@ -501,4 +525,19 @@ def checkEnumerableTypeShortcut(type, stars as List):
 		(enumerable as GenericTypeReference).GenericArguments.Add(type)
 		type = enumerable
 	return enumerable
+
+def getLine(input as OMetaInput):
+	if input:
+		return input.GetMemo("line") or 1
+	else:
+		return -1
+
+def getColumn(input as OMetaInput):
+	if input:
+		return input.Position - getLineStart(input) + 1 //Columns enumeration starts from 1
+	else:
+		return -1
 	
+
+def getLineStart(input as OMetaInput):
+	return (input.GetMemo("lineStart") or 1) cast int

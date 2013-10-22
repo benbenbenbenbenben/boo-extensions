@@ -14,6 +14,12 @@ Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.OMeta.Parser.Tests", ".
 EndProject
 Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "OMetaParserConsole", "..\OMetaParserConsole\OMetaParserConsole.booproj", "{49F3D03F-83E3-449C-99F5-209D5C25714D}"
 EndProject
+Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.TinyAst", "..\Boo.TinyAst\Boo.TinyAst.booproj", "{5E3584E2-1BD0-49DA-815B-2DDA724C565F}"
+EndProject
+Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.TinyAst.Tests", "..\Boo.TinyAst.Tests\Boo.TinyAst.Tests.booproj", "{9AF43C11-68A7-492E-BC9E-924349BE92BD}"
+EndProject
+Project("{A33008B1-5DAC-44D5-9060-242E3B6E38F2}") = "Boo.TinyAst.Macro", "..\Boo.TinyAst.Macro\Boo.TinyAst.Macro.booproj", "{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -44,5 +50,17 @@ Global
 		{49F3D03F-83E3-449C-99F5-209D5C25714D}.Debug|x86.ActiveCfg = Debug|x86
 		{49F3D03F-83E3-449C-99F5-209D5C25714D}.Release|x86.Build.0 = Release|x86
 		{49F3D03F-83E3-449C-99F5-209D5C25714D}.Release|x86.ActiveCfg = Release|x86
+		{5E3584E2-1BD0-49DA-815B-2DDA724C565F}.Debug|x86.Build.0 = Debug|x86
+		{5E3584E2-1BD0-49DA-815B-2DDA724C565F}.Debug|x86.ActiveCfg = Debug|x86
+		{5E3584E2-1BD0-49DA-815B-2DDA724C565F}.Release|x86.Build.0 = Release|x86
+		{5E3584E2-1BD0-49DA-815B-2DDA724C565F}.Release|x86.ActiveCfg = Release|x86
+		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Debug|x86.Build.0 = Debug|x86
+		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Debug|x86.ActiveCfg = Debug|x86
+		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Release|x86.Build.0 = Release|x86
+		{9AF43C11-68A7-492E-BC9E-924349BE92BD}.Release|x86.ActiveCfg = Release|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Debug|x86.Build.0 = Debug|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Debug|x86.ActiveCfg = Debug|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Release|x86.Build.0 = Release|x86
+		{9D23C9CD-86E8-4753-8FC8-5544A3FD1117}.Release|x86.ActiveCfg = Release|x86
 	EndGlobalSection
 EndGlobal

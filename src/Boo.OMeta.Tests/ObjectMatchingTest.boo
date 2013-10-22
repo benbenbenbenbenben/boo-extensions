@@ -6,6 +6,8 @@ import Boo.Adt
 import NUnit.Framework
 
 data Exp = Const(value as int) | Sum(left as Exp, right as Exp)
+data Employee(FirstName as string,	LastName as string)
+
 
 [TestFixture]
 class ObjectMatchingTest:
@@ -32,48 +34,60 @@ class ObjectMatchingTest:
 			case SuccessfulMatch(Input, Value):
 				assert Input.IsEmpty
 				Assert.AreEqual(42, Value)
+
+	[Test]
+	def MatchingStringProperties():			
+		ometa EmployeeClassMatching:
+			firstName = "John", ~_
+			lastName = "Lennon", ~_
+			checkJohnLennon = Employee(FirstName: firstName, LastName: lastName)
+	
+		match EmployeeClassMatching().checkJohnLennon(OMetaInput.Singleton(Employee("John", "Lennon"))):
+			case SuccessfulMatch(Input):
+				assert Input.IsEmpty
+				
+		match EmployeeClassMatching().checkJohnLennon(OMetaInput.Singleton(Employee("Julian", "Lennon"))):
+			case FailedMatch():
+				pass
+				
+		match EmployeeClassMatching().checkJohnLennon(OMetaInput.Singleton(Employee("John", "Travolta"))):
+			case FailedMatch():
+				pass
 				
 	[Test]
-	def StringFieldMatchingWithCustomRule():
-			
-		data Person(name)
-		
-		ometa JohnOrPaulMatcher:
-					
-			match = Person(name: string_matching[john_or_paul] >> _)
-			john = "John "
-			paul = "Paul "
-			john_or_paul = john | paul
-			
-			string_matching[rule] = $(string_matching(rule, input))
-			
-			def string_matching(rule as string, input as OMetaInput):
-				match input.Head:
-					case s = string():
-						match Apply(rule, OMetaInput.For(s)):
-							case SuccessfulMatch():
-								return SuccessfulMatch(input.Tail, input.Head)
-							case FailedMatch(Failure):
-								return FailedMatch(input, Failure)
-					otherwise:
-						return FailedMatch(input, ObjectPatternFailure("'$(input.Head)' is not a string"))
-		
-		def john_or_paul(person): 
-			return JohnOrPaulMatcher().match(OMetaInput.Singleton(person))
-		
-		match john_or_paul(Person("John Stewart")):
-			case SuccessfulMatch(Input):
+	def UsingUnderscore():			
+		ometa EmployeeClassMatching2:
+			getFirstName = Employee(FirstName: _ >> f) ^ f
+	
+		match EmployeeClassMatching2().getFirstName(OMetaInput.Singleton(Employee("John", "Lennon"))):
+			case SuccessfulMatch(Value, Input):
+				assert Value = "John"
 				assert Input.IsEmpty
-				
-		match john_or_paul(Person("Paul Jones")):
-			case SuccessfulMatch(Input):
+
+	[Test]
+	def UsingPredicate():			
+		ometa EmployeeClassMatching3:
+			getFirstName = Employee(FirstName: _ >> f and (f isa string)) ^ f
+	
+		match EmployeeClassMatching3().getFirstName(OMetaInput.Singleton(Employee("John", "Lennon"))):
+			case e = SuccessfulMatch(Value, Input):
+				assert Value = "John"
 				assert Input.IsEmpty
-				
-		match john_or_paul(Person("Eric")):
-			case FailedMatch(Input):
-				assert Input.Head == "Eric"
-				
-		match john_or_paul(Person(42)):
-			case FailedMatch(Input, Failure: ObjectPatternFailure(Pattern)):
-				assert Input.Head == 42
-				assert Pattern == "'42' is not a string"
+	
+	ometa EmployeeClassMatching4:
+		startFromJ = "J"
+		firstNameStartsFromJ = Employee(FirstName: startFromJ)
+
+	[Test]
+	def ObjectMatchingReturnsSameObject():
+		obj = Employee("John", "Lennon")
+		match EmployeeClassMatching4().firstNameStartsFromJ(OMetaInput.Singleton(obj)):
+			case e = SuccessfulMatch(Value):
+				assert Value is obj
+	[Test]
+	def ObjectMatchingIsolatesInput():
+		obj = Employee("John", "Lennon")
+		match EmployeeClassMatching4().firstNameStartsFromJ(OMetaInput.Singleton(obj)):
+			case e = SuccessfulMatch(Input):
+				assert Input.IsEmpty
+		

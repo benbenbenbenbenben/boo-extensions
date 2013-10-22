@@ -171,22 +171,23 @@ class OMetaMacroRuleProcessor:
 		return e
 		
 	def expand(block as Block, e as Expression, input as Expression, lastMatch as ReferenceExpression):
+		lm as Expression = [| $lastMatch.Input |]
+		
 		match e:
-			case SpliceExpression(Expression: rule):
-				block.Add([| $lastMatch = $(processVariables(rule, input)) |])
-				
+			case SpliceExpression(Expression: rule):				
+				block.Add([| $lastMatch = $(processVariables(rule, lm)) |])				
 			case [| $rule[$arg] |]:
 				newInput = uniqueName()
 				effectiveArg = effectiveArgForRule(arg)
-				block.Add([| $newInput = $input.Prepend($effectiveArg) |])
+				block.Add([| $newInput = $input.Prepend($effectiveArg, null) |])
 				expand block, rule, newInput, lastMatch
 				
 			case [| $pattern and $predicate |]:
 				oldInput = uniqueName()
 				block.Add([| $oldInput = $input |])
-				expand block, pattern, input, lastMatch
+				expand block, pattern, input, lastMatch				
 				checkPredicate = [|
-					if $lastMatch isa SuccessfulMatch and not $(processVariables(predicate, input)):
+					if $lastMatch isa SuccessfulMatch and not $(processVariables(predicate, lm)):
 						$lastMatch = FailedMatch($oldInput, PredicateFailure($(predicate.ToCodeString())))
 				|]
 				block.Add(checkPredicate)
@@ -198,7 +199,7 @@ class OMetaMacroRuleProcessor:
 						block:
 							smatch = $lastMatch as SuccessfulMatch
 							if smatch is not null:
-								$lastMatch = SuccessfulMatch(smatch.Input, $(processVariables(value, input)))
+								$lastMatch = SuccessfulMatch(smatch.Input, $(processVariables(value, lm)))
 					|].Body
 					block.Add(code)
 				
@@ -259,15 +260,21 @@ class OMetaMacroRuleProcessor:
 			case [| $_() |]:
 				rules = processObjectPatternRules(e)
 				condition = Boo.Lang.PatternMatching.Impl.PatternExpander().Expand([| smatch.Value |], e)
+				startInput = uniqueName()
 				code = [|
 					block:
+						$startInput = $input #saving start input 
 						$lastMatch = any($input)
-						smatch = $lastMatch as SuccessfulMatch
+						smatch = $lastMatch as SuccessfulMatch						
 						if smatch is not null:
 							if $condition:
 								$(expandObjectPatternRules(rules, lastMatch))
 							else:
 								$lastMatch = FailedMatch($input, ObjectPatternFailure($(e.ToCodeString())))
+							if $lastMatch isa SuccessfulMatch:
+								#overriding input of lastMatch
+								#returning object itself as Value	
+								$lastMatch = SuccessfulMatch($startInput.Tail, $startInput.Head) 
 				|].Body
 				block.Add(code) 
 				
@@ -291,24 +298,40 @@ class OMetaMacroRuleProcessor:
 		input = uniqueName()
 		
 		currentBlock = block
+		code as IfStatement
 		for temp as Expression, rule as Expression in rules:
-			block.Add([| $input = OMetaInput.Singleton($temp) |])
-			expand block, rule, input, lastMatch
+			if code:
+				currentBlock.Add(code)
+				currentBlock = code.TrueBlock
+			
+			currentBlock.Add(inputForObjectPatternRule(rule, temp, input))
+			expand currentBlock, rule, input, lastMatch
 			code = [|
 				if $lastMatch isa SuccessfulMatch:
 					pass
 			|]
-			currentBlock.Add(code)
-			currentBlock = code.TrueBlock
 		return block
+		
+	def inputForObjectPatternRule(rule as Expression, temp as Expression, input as ReferenceExpression):
+		inputCode as Statement
+		match rule:
+			case BinaryExpression(Left: ReferenceExpression(Name: "_")) | BinaryExpression(Left: BinaryExpression(Left: ReferenceExpression(Name: "_"))) | ReferenceExpression(Name: "_"):
+				inputCode = ExpressionStatement([| $input = OMetaInput.Singleton($temp)	|])
+			otherwise:
+				inputCode = [| 
+					if $temp isa System.Collections.IEnumerable:
+						$input = OMetaInput.For($temp)					
+					else:
+						$input = OMetaInput.Singleton($temp)
+				|]		
+		return inputCode
 		
 	def processObjectPatternRules(rules as List, pattern as MethodInvocationExpression):
 		for arg in pattern.NamedArguments:
 			match arg.Second:
-				case [| $_ >> $_ |]:
+				case MemberReferenceExpression():
+					pass
+				otherwise:
 					temp = uniqueName()
 					rules.Add((temp, arg.Second))
 					arg.Second = temp
-				otherwise:
-					pass
-			

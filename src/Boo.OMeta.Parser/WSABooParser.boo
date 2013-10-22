@@ -2,8 +2,9 @@ namespace Boo.OMeta.Parser
 	
 import Boo.OMeta
 import Boo.Lang.Compiler.Ast
+import Boo.Lang.Compiler
 	
-ometa WSABooParser < BooParser:
+ometa WSABooParser(compilerParameters as CompilerParameters) < BooParser(compilerParameters):
 	scanner = (empty_lines ^ makeToken("eol")) | ((--space, tokens >> t) ^ t)
 
 	keywords = ~"pass", ("end" | super)
@@ -13,7 +14,7 @@ ometa WSABooParser < BooParser:
 	empty_block = (begin_block, end_block) ^ Block()
 	
 	member_reference = (((member_reference >> e,  DOT, enterWhitespaceAgnosticRegion, ID >> name, leaveWhitespaceAgnosticRegion) \
-		^ newMemberReference(e, name)) | slicing) >> e, (INCREMENT | DECREMENT | "") >> postOp ^ addSuffixUnaryOperator(e, postOp)
+		^ newMemberReference(e, tokenValue(name))) | slicing) >> e, (INCREMENT | DECREMENT | "") >> postOp ^ addSuffixUnaryOperator(e, postOp)
 	
 	INDENT = eol | ""
 	DEDENT = eol | ""
